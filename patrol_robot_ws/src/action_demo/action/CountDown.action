@@ -1,0 +1,5 @@
+int32 target
+---
+int32 final_count
+---
+int32 current
