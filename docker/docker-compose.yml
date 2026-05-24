@@ -1,0 +1,22 @@
+services:
+  ros2:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: patrolbot:latest
+    container_name: patrolbot_dev
+    environment:
+      - DISPLAY=${DISPLAY}
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix
+      - ../patrol_robot_ws:/root/patrol_robot_ws
+    network_mode: host
+    stdin_open: true
+    tty: true
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]

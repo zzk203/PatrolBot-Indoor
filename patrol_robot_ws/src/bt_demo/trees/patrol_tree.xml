@@ -1,0 +1,76 @@
+<?xml version="1.0"?>
+<root BTCPP_format="4">
+  <!-- ======
+   室内巡逻机器人行为树
+   核心设计：电量优先 + 异常检测 + 循环巡逻
+
+   执行逻辑：
+   - 每个 Tick 执行一条分支（电量充足 → 巡逻 / 电量不足 → 充电）
+   - 巡逻中 DetectAnomaly 结果不影响流程（ForceSuccess 包裹）
+   - ReportAnomaly 仅在有异常时执行（Fallback 控制）
+   ====== -->
+
+  <BehaviorTree ID="PatrolMain">
+
+    <Fallback name="Root">
+
+      <!-- 分支A：电量充足 → 执行巡逻 -->
+      <Sequence name="正常巡逻">
+        <CheckBattery battery_level="{battery}"/>
+
+        <SaySomething message="开始巡逻路线"/>
+        <MoveTo waypoint="巡逻点A"/>
+
+        <!-- 异常检测+上报（不影响巡逻流程） -->
+        <ForceSuccess>
+          <Fallback>
+            <Sequence>
+              <DetectAnomaly/>
+              <ReportAnomaly/>
+            </Sequence>
+            <SaySomething message="正常无异常"/>
+          </Fallback>
+        </ForceSuccess>
+
+        <MoveTo waypoint="巡逻点B"/>
+
+        <ForceSuccess>
+          <Fallback>
+            <Sequence>
+              <DetectAnomaly/>
+              <ReportAnomaly/>
+            </Sequence>
+            <SaySomething message="正常无异常"/>
+          </Fallback>
+        </ForceSuccess>
+
+        <MoveTo waypoint="巡逻点C"/>
+
+        <ForceSuccess>
+          <Fallback>
+            <Sequence>
+              <DetectAnomaly/>
+              <ReportAnomaly/>
+            </Sequence>
+            <SaySomething message="正常无异常"/>
+          </Fallback>
+        </ForceSuccess>
+
+        <SaySomething message="一轮巡逻完成"/>
+        <Wait seconds="1"/>
+
+      </Sequence>
+
+      <!-- 分支B：电量不足 → 执行充电 -->
+      <Sequence name="充电流程">
+        <SaySomething message="电量低，前往充电站"/>
+        <MoveTo waypoint="充电站"/>
+        <ChargeBattery />
+        <SaySomething message="充电完成"/>
+        <CheckBattery battery_level="{battery}" is_charge_battery="true" />
+      </Sequence>
+
+    </Fallback>
+
+  </BehaviorTree>
+</root>

@@ -18,7 +18,7 @@
 - [ ] **M0.4** 配置开发工作空间
   - 创建 `patrol_robot_ws` 工作空间
   - 初始化 `src` 目录结构（如设计文档所示）
-  - 安装依赖：`ros-humble-navigation2`, `ros-humble-nav2-bringup`, `ros-humble-behaviortree-cpp-v4` 等
+  - 安装依赖：`ros-humble-navigation2`, `ros-humble-nav2-bringup`, `ros-humble-behaviortree-cpp` 等
 - [ ] **M0.5** 学习 BehaviorTree.CPP 核心概念
   - 理解 tick 机制、黑板、常用节点类型 (Sequence/Fallback/Decorator)
   - 运行官方教程示例，用 Groot2 可视化

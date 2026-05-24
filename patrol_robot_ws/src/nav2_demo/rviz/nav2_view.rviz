@@ -1,0 +1,66 @@
+Panels:
+  - Class: rviz_common/Displays
+    Name: Displays
+  - Class: rviz_common/Views
+    Name: Views
+Visualization Manager:
+  Displays:
+    # 地图
+    - Class: rviz_default_plugins/Map
+      Name: Map
+      Topic: /map
+      Alpha: 0.7
+      Color Scheme: map
+
+    # 全局代价地图
+    - Class: rviz_default_plugins/Map
+      Name: Global Costmap
+      Topic: /global_costmap/costmap_raw
+      Alpha: 0.5
+      Color Scheme: costmap
+
+    # 局部代价地图
+    - Class: rviz_default_plugins/Map
+      Name: Local Costmap
+      Topic: /local_costmap/costmap_raw
+      Alpha: 0.5
+      Color Scheme: costmap
+
+    # 全局路径
+    - Class: rviz_default_plugins/Path
+      Name: Global Plan
+      Topic: /plan
+      Color: 0; 255; 0
+
+    # 机器人模型
+    - Class: rviz_default_plugins/RobotModel
+      Name: RobotModel
+      Description Topic: /robot_description
+
+    # 激光扫描
+    - Class: rviz_default_plugins/LaserScan
+      Name: LaserScan
+      Topic: /scan
+
+    # TF
+    - Class: rviz_default_plugins/TF
+      Name: TF
+      Enabled: true
+
+    # 粒子云（AMCL 定位粒子）
+    - Class: rviz_default_plugins/PoseArray
+      Name: AMCL Particles
+      Topic: /particlecloud
+
+    # 目标点标记
+    - Class: rviz_default_plugins/MarkerArray
+      Name: Goal Markers
+      Topic: /goal_pose_marker
+
+  Global Options:
+    Fixed Frame: map
+  Views:
+    Current:
+      Class: rviz_default_plugins/Orbit
+      Distance: 10
+      Focal Point: [0, 0, 0]

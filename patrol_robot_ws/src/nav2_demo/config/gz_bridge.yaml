@@ -1,0 +1,34 @@
+# ====== ROS2 ↔ Gazebo 桥接配置 ======
+# 格式：每项定义一个话题映射关系
+#   topic_name: ROS2 侧的话题名
+#   ros_type_name: ROS2 消息类型
+#   gz_type_name: Gazebo 消息类型
+#   gz_topic_name: Gazebo 侧的话题名（可选，不填则与 ROS2 同名）
+#   direction: 方向 (ROS_TO_GZ=发布到Gazebo, GZ_TO_ROS=订阅Gazebo, BIDIRECTIONAL=双向)
+
+# === /cmd_vel: ROS2 → Gazebo (控制机器人) ===
+- topic_name: "/cmd_vel"
+  ros_type_name: "geometry_msgs/msg/Twist"
+  gz_type_name: "gz.msgs.Twist"
+  gz_topic_name: "/model/patrol_bot/cmd_vel"
+  direction: ROS_TO_GZ
+
+# === /raw_odom: Gazebo → ROS2 (原始里程计，由 odom_republisher 处理) ===
+- topic_name: "/raw_odom"
+  ros_type_name: "nav_msgs/msg/Odometry"
+  gz_type_name: "gz.msgs.Odometry"
+  gz_topic_name: "/model/patrol_bot/odometry"
+  direction: GZ_TO_ROS
+
+# === /scan_cloud: Gazebo LiDAR → ROS2 =====
+- topic_name: "/scan_cloud"
+  ros_type_name: "sensor_msgs/msg/PointCloud2"
+  gz_type_name: "gz.msgs.PointCloudPacked"
+  gz_topic_name: "/scan"
+  direction: GZ_TO_ROS
+
+# === /clock: Gazebo → ROS2 (仿真时钟同步) ===
+- topic_name: "/clock"
+  ros_type_name: "rosgraph_msgs/msg/Clock"
+  gz_type_name: "gz.msgs.Clock"
+  direction: GZ_TO_ROS

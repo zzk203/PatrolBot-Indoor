@@ -1,0 +1,75 @@
+<?xml version="1.0"?>
+<!--
+  Nav2 默认行为树: navigate_w_replanning_and_recovery
+
+  核心结构:
+  ┌──────────────────────────────────────────────┐
+  │  PipelineSequence (管道顺序)                  │
+  │  ├─ 1. ComputePathToPose (全局规划)           │
+  │  │     └─ GetPath                             │
+  │  ├─ 2. FollowPath (路径跟踪)                  │
+  │  │     └─ 如果卡住 → Recovery (恢复行为)       │
+  │  └─ 3. 到达目标                              │
+  └──────────────────────────────────────────────┘
+
+  恢复行为 (Recovery) RoundRobin:
+  ┌──────────────────────┐
+  │  Spin (原地旋转360°)   │ → 清除障碍
+  │  BackUp (后退)        │ → 脱离卡死
+  │  Wait (等待)          │ → 等待障碍物离开
+  └──────────────────────┘
+-->
+
+<root BTCPP_format="4">
+  <BehaviorTree ID="NavigateWithReplanning">
+
+    <!-- PipelineSequence: 管道顺序执行，任意步骤失败则触发 Recovery -->
+    <PipelineSequence name="NavigateWithReplanning">
+
+      <!-- 步骤 1: 全局路径规划 (ComputePathToPose) -->
+      <RateController hz="1.0">
+        <RecoveryNode number_of_retries="1" name="ComputePathToPose">
+          <ComputePathToPose
+            goal="{goal}" path="{path}"
+            planner_id="GridBased"
+            error_code_id="{compute_path_error_code}"/>
+          <ClearEntireCostmap name="ClearGlobalCostmap" service_name="global_costmap/clear_entirely_global_costmap"/>
+        </RecoveryNode>
+      </RateController>
+
+      <!-- 步骤 2: 路径跟踪 (FollowPath) -->
+      <RecoveryNode number_of_retries="1" name="FollowPath">
+        <FollowPath
+          path="{path}"
+          controller_id="FollowPath"
+          goal_checker_id="goal_checker"/>
+
+        <RoundRobin name="RecoveryActions">
+          <Sequence name="ClearAndSpin">
+            <ClearEntireCostmap name="ClearLocalCostmap" service_name="local_costmap/clear_entirely_local_costmap"/>
+            <Spin/>
+          </Sequence>
+          <Sequence name="ClearAndBackUp">
+            <ClearEntireCostmap name="ClearLocalCostmap-BackUp" service_name="local_costmap/clear_entirely_local_costmap"/>
+            <BackUp/>
+          </Sequence>
+          <Sequence name="WaitForObstacle">
+            <ClearEntireCostmap name="ClearLocalCostmap-Wait" service_name="local_costmap/clear_entirely_local_costmap"/>
+            <Wait wait_duration="5"/>
+          </Sequence>
+        </RoundRobin>
+
+      </RecoveryNode>
+
+      <!-- 步骤 3: 目标到达检查 -->
+      <RateController hz="10.0">
+        <Sequence>
+          <GoalReached name="GoalReached" goal="{goal}" path="{path}"/>
+          <AlwaysSuccess/>
+        </Sequence>
+      </RateController>
+
+    </PipelineSequence>
+
+  </BehaviorTree>
+</root>
