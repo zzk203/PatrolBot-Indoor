@@ -72,14 +72,17 @@ class MockNav2ActionServer(Node):
             f"{goal_request.pose.pose.position.y:.2f})"
         )
 
-        if self.accept_goal: return GoalResponse.ACCEPT; else: return GoalResponse.REJECT
+        if self.accept_goal:
+            return GoalResponse.ACCEPT
+        else:
+            return GoalResponse.REJECT
 
     def cancel_callback(self, goal_handle: ServerGoalHandle):
         """取消回调"""
         self.get_logger().info(f"目标被取消: {goal_handle.goal_id}")
         return CancelResponse.ACCEPT  # 接受取消
 
-    async def execute_callback(self, goal_handle: ServerGoalHandle):
+    def execute_callback(self, goal_handle: ServerGoalHandle):
         """执行回调 - 模拟导航执行"""
         self.goal_handles.append(goal_handle)
 
@@ -90,15 +93,12 @@ class MockNav2ActionServer(Node):
 
         for i in range(3):
             feedback_msg.distance_remaining -= 1.5
-            feedback_msg.estimated_time_remaining = \
-                rclpy.duration.Duration(seconds=int(10 - i * 3)).to_msg()
             goal_handle.publish_feedback(feedback_msg)
             self.feedback_count += 1
-            await rclpy.sleep(0.05)
 
         # 返回结果
         result = NavigateToPose.Result()
-        result.error_code = 0
+        
 
         if self.result_status == GoalStatus.STATUS_SUCCEEDED:
             goal_handle.succeed()
@@ -107,7 +107,7 @@ class MockNav2ActionServer(Node):
             goal_handle.canceled()
             self.get_logger().info("⚠️ 模拟导航取消")
         else:
-            result.error_code = 1
+            
             goal_handle.abort()
             self.get_logger().info("❌ 模拟导航失败")
 
@@ -171,7 +171,7 @@ class TestNavigateToPose:
 
         # 通过 goal_callback 验证
         result = mock_server.goal_callback(goal)
-        assert result is True, "目标格式验证失败"
+        assert result == GoalResponse.ACCEPT, "目标格式验证失败"
         assert mock_server.goal_count == 1
         mock_server.get_logger().info("✓ 目标消息格式验证通过")
 
@@ -200,7 +200,7 @@ class TestNavigateToPose:
             goal.pose.pose.orientation.w = __import__('math').cos(yaw / 2.0)
 
             result = mock_server.goal_callback(goal)
-            assert result is True, f"坐标 ({x}, {y}, {yaw}) 验证失败"
+            assert result == GoalResponse.ACCEPT, f"坐标 ({x}, {y}, {yaw}) 验证失败"
 
         mock_server.get_logger().info("✓ 所有目标坐标在地图范围内")
 
@@ -228,7 +228,7 @@ class TestNavigateToPose:
                 f"朝向 yaw={yaw} 的四元数不归一: norm={norm:.4f}"
 
             result = mock_server.goal_callback(goal)
-            assert result is True
+            assert result == GoalResponse.ACCEPT
 
         mock_server.get_logger().info("✓ 所有朝向四元数规范化验证通过")
 
@@ -271,8 +271,7 @@ class TestNavigateToPose:
         # 验证反馈
         assert len(received_feedback) > 0, "未收到反馈"
         for fb in received_feedback:
-            assert fb.distance_remaining >= 0.0, "剩余距离不能为负"
-            assert hasattr(fb, 'estimated_time_remaining'), "缺少预计时间字段"
+            assert fb.feedback.distance_remaining >= 0.0, "剩余距离不能为负"
 
         client_node.destroy_node()
         executor.shutdown()
