@@ -118,16 +118,20 @@ def generate_launch_description():
             name="planner_server",
         ),
         # 局部控制器（内部创建 local_costmap）
+        # remappings: 控制器发布 cmd_vel，需映射到桥接的 Gazebo 话题名
         Node(
             package="nav2_controller", executable="controller_server",
             parameters=[params_file],
+            remappings=[("cmd_vel", "/model/patrol_bot/cmd_vel")],
             output="screen",
             name="controller_server",
         ),
         # 行为服务器（提供 spin/back_up/wait 恢复行为动作）
+        # remappings: behavior_server 发布 cmd_vel 用于旋转/后退/等待
         Node(
             package="nav2_behaviors", executable="behavior_server",
             parameters=[params_file],
+            remappings=[("cmd_vel", "/model/patrol_bot/cmd_vel")],
             output="screen",
             name="behavior_server",
         ),
