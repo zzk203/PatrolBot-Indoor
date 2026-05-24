@@ -22,12 +22,13 @@ import threading
 import os
 import pytest
 import rclpy
-from rclpy.action import ActionServer
+from rclpy.action import ActionServer, ActionClient
 from rclpy.executors import SingleThreadedExecutor
 from rclpy.node import Node
 from rclpy.action.server import ServerGoalHandle
 from nav2_msgs.action import NavigateToPose
 from action_msgs.msg import GoalStatus
+from rclpy.action import GoalResponse
 
 
 # ======================================================================
@@ -62,7 +63,7 @@ class MockNavigateToPoseServer(Node):
     def _goal_callback(self, goal_req):
         if not self.accept_goal:
             self.get_logger().info("[MockServer] 拒绝目标")
-            return False
+            return GoalResponse.REJECT
         self.received_goals.append(goal_req)
         seq = len(self.received_goals)
         self.get_logger().info(
@@ -70,12 +71,12 @@ class MockNavigateToPoseServer(Node):
             f"({goal_req.pose.pose.position.x:.1f}, "
             f"{goal_req.pose.pose.position.y:.1f})"
         )
-        return True
+        return GoalResponse.ACCEPT
 
     def _cancel_callback(self, goal_handle):
         self.cancel_requested = True
         self.get_logger().info("[MockServer] 取消请求")
-        return True
+        return GoalResponse.ACCEPT
 
     async def _execute(self, goal_handle):
         import asyncio
@@ -143,8 +144,8 @@ class TestNavigateToPoseTiming:
         executor = SingleThreadedExecutor()
         executor.add_node(node)
 
-        client = node.create_client(NavigateToPose, "navigate_to_pose")
-        assert client.wait_for_service(timeout_sec=2.0)
+        client = ActionClient(node, NavigateToPose, "navigate_to_pose")
+        assert client.wait_for_server(timeout_sec=2.0)
 
         goal = NavigateToPose.Goal()
         goal.pose.header.frame_id = "map"
@@ -187,8 +188,8 @@ class TestNavigateToPoseTiming:
         t.start()
 
         node = Node("test_timeout")
-        client = node.create_client(NavigateToPose, "navigate_to_pose")
-        assert client.wait_for_service(timeout_sec=2.0)
+        client = ActionClient(node, NavigateToPose, "navigate_to_pose")
+        assert client.wait_for_server(timeout_sec=2.0)
 
         goal = NavigateToPose.Goal()
         goal.pose.header.frame_id = "map"
@@ -235,8 +236,8 @@ class TestNavigateToPoseTiming:
         t.start()
 
         node = Node("test_rejected")
-        client = node.create_client(NavigateToPose, "navigate_to_pose")
-        assert client.wait_for_service(timeout_sec=2.0)
+        client = ActionClient(node, NavigateToPose, "navigate_to_pose")
+        assert client.wait_for_server(timeout_sec=2.0)
 
         goal = NavigateToPose.Goal()
         goal.pose.header.frame_id = "map"
@@ -269,8 +270,8 @@ class TestMultiWaypointPatrol:
         executor = SingleThreadedExecutor()
         executor.add_node(node)
 
-        client = node.create_client(NavigateToPose, "navigate_to_pose")
-        assert client.wait_for_service(timeout_sec=2.0)
+        client = ActionClient(node, NavigateToPose, "navigate_to_pose")
+        assert client.wait_for_server(timeout_sec=2.0)
 
         waypoints = [
             (2.0, 2.0, 0.0),
@@ -327,8 +328,8 @@ class TestMultiWaypointPatrol:
         t.start()
 
         node = Node("test_failure_continue")
-        client = node.create_client(NavigateToPose, "navigate_to_pose")
-        assert client.wait_for_service(timeout_sec=2.0)
+        client = ActionClient(node, NavigateToPose, "navigate_to_pose")
+        assert client.wait_for_server(timeout_sec=2.0)
 
         # 定义 3 个航点
         waypoints = [
@@ -394,8 +395,8 @@ class TestMultiWaypointPatrol:
         t.start()
 
         node = Node("test_fallback_record")
-        client = node.create_client(NavigateToPose, "navigate_to_pose")
-        assert client.wait_for_service(timeout_sec=2.0)
+        client = ActionClient(node, NavigateToPose, "navigate_to_pose")
+        assert client.wait_for_server(timeout_sec=2.0)
 
         # 连续发送 3 个目标，每个都应该失败
         for i in range(3):
@@ -523,12 +524,12 @@ class TestPatrolRoundXML:
             content = f.read()
 
         # 验证关键节点存在
-        assert "LoadWaypointsNode" in content, "缺少 LoadWaypointsNode"
+        assert "NextWaypointNode" in content, "缺少 NextWaypointNode"
         assert "NextWaypointNode" in content, "缺少 NextWaypointNode"
         assert "NavigateToPoseNode" in content, "缺少 NavigateToPoseNode"
         assert "RecordFailureNode" in content, "缺少 RecordFailureNode"
         assert "Fallback" in content, "缺少 Fallback（堵赛放弃逻辑）"
-        assert "Wait" in content, "缺少 Wait（停留延时）"
+        assert "Wait" in content, "patrol_round uses Delay for wait"
         assert "Repeat" in content, "缺少 Repeat（巡逻循环）"
 
         # 验证关键黑板端口

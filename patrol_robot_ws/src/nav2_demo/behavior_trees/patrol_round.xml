@@ -78,7 +78,11 @@
           </Fallback>
 
           <!-- 2c. 到达后短暂停留 -->
-          <Wait wait_duration="{waypoint_wait_duration}"/>
+          <!-- waypoint_wait_duration 单位秒 → delay_msec 需要毫秒 -->
+          <Script code="delay_msec := {waypoint_wait_duration} * 1000"/>
+          <Delay delay_msec="{delay_msec}">
+            <AlwaysSuccess/>
+          </Delay>
 
         </Sequence>
 

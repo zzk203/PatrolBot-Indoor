@@ -20,12 +20,13 @@ import math
 import threading
 import pytest
 import rclpy
-from rclpy.action import ActionServer
+from rclpy.action import ActionServer, ActionClient
 from rclpy.executors import SingleThreadedExecutor
 from rclpy.node import Node
 from rclpy.action.server import ServerGoalHandle
 from nav2_msgs.action import NavigateToPose
 from action_msgs.msg import GoalStatus
+from rclpy.action import GoalResponse
 
 
 # ======================================================================
@@ -64,19 +65,19 @@ class MockNavigateToPoseServer(Node):
     def _goal_callback(self, goal_req):
         if not self.accept_goal:
             self.get_logger().info("[MockServer] 拒绝目标")
-            return False
+            return GoalResponse.REJECT
         self.received_goals.append(goal_req)
         self.get_logger().info(
             f"[MockServer] 接受目标 #{len(self.received_goals)}: "
             f"({goal_req.pose.pose.position.x:.1f}, "
             f"{goal_req.pose.pose.position.y:.1f})"
         )
-        return True
+        return GoalResponse.ACCEPT
 
     def _cancel_callback(self, goal_handle):
         self.cancel_requested = True
         self.get_logger().info("[MockServer] 取消请求")
-        return True
+        return GoalResponse.ACCEPT
 
     async def _execute(self, goal_handle):
         import asyncio
@@ -142,8 +143,8 @@ class TestNav2DemoNodeActionClient:
     def test_action_client_creation(self, mock_server):
         """测试 1: 创建动作客户端并连接到 Mock Server"""
         node = Node("test_client_create")
-        client = node.create_client(NavigateToPose, "navigate_to_pose")
-        assert client.wait_for_service(timeout_sec=2.0), \
+        client = ActionClient(node, NavigateToPose, "navigate_to_pose")
+        assert client.wait_for_server(timeout_sec=2.0), \
             "无法连接到 navigate_to_pose action server"
         node.destroy_node()
         mock_server.get_logger().info("✓ 动作客户端创建和连接正常")
@@ -154,8 +155,8 @@ class TestNav2DemoNodeActionClient:
         executor = SingleThreadedExecutor()
         executor.add_node(node)
 
-        client = node.create_client(NavigateToPose, "navigate_to_pose")
-        assert client.wait_for_service(timeout_sec=2.0)
+        client = ActionClient(node, NavigateToPose, "navigate_to_pose")
+        assert client.wait_for_server(timeout_sec=2.0)
 
         # 构建目标
         goal = NavigateToPose.Goal()
@@ -194,8 +195,8 @@ class TestNav2DemoNodeActionClient:
     def test_goal_has_required_fields(self, mock_server):
         """测试 3: 验证目标包含所有必填字段"""
         node = Node("test_goal_fields")
-        client = node.create_client(NavigateToPose, "navigate_to_pose")
-        assert client.wait_for_service(timeout_sec=2.0)
+        client = ActionClient(node, NavigateToPose, "navigate_to_pose")
+        assert client.wait_for_server(timeout_sec=2.0)
 
         goal = NavigateToPose.Goal()
         # 验证必填字段存在
@@ -213,8 +214,8 @@ class TestNav2DemoNodeActionClient:
     def test_goal_frame_id_is_map(self, mock_server):
         """测试 4: 验证 frame_id 必须是 map"""
         node = Node("test_frame_id")
-        client = node.create_client(NavigateToPose, "navigate_to_pose")
-        assert client.wait_for_service(timeout_sec=2.0)
+        client = ActionClient(node, NavigateToPose, "navigate_to_pose")
+        assert client.wait_for_server(timeout_sec=2.0)
 
         goal = NavigateToPose.Goal()
         goal.pose.header.frame_id = "map"
@@ -234,8 +235,8 @@ class TestNav2DemoNodeActionClient:
         executor = SingleThreadedExecutor()
         executor.add_node(node)
 
-        client = node.create_client(NavigateToPose, "navigate_to_pose")
-        assert client.wait_for_service(timeout_sec=2.0)
+        client = ActionClient(node, NavigateToPose, "navigate_to_pose")
+        assert client.wait_for_server(timeout_sec=2.0)
 
         feedback_msgs = []
 
@@ -286,8 +287,8 @@ class TestNav2DemoNodeActionClient:
         executor = SingleThreadedExecutor()
         executor.add_node(node)
 
-        client = node.create_client(NavigateToPose, "navigate_to_pose")
-        assert client.wait_for_service(timeout_sec=2.0)
+        client = ActionClient(node, NavigateToPose, "navigate_to_pose")
+        assert client.wait_for_server(timeout_sec=2.0)
 
         goal = NavigateToPose.Goal()
         goal.pose.header.frame_id = "map"
@@ -320,8 +321,8 @@ class TestNav2DemoNodeActionClient:
         executor = SingleThreadedExecutor()
         executor.add_node(node)
 
-        client = node.create_client(NavigateToPose, "navigate_to_pose")
-        assert client.wait_for_service(timeout_sec=2.0)
+        client = ActionClient(node, NavigateToPose, "navigate_to_pose")
+        assert client.wait_for_server(timeout_sec=2.0)
 
         goal = NavigateToPose.Goal()
         goal.pose.header.frame_id = "map"
@@ -353,8 +354,8 @@ class TestNav2DemoNodeActionClient:
         executor = SingleThreadedExecutor()
         executor.add_node(node)
 
-        client = node.create_client(NavigateToPose, "navigate_to_pose")
-        assert client.wait_for_service(timeout_sec=2.0)
+        client = ActionClient(node, NavigateToPose, "navigate_to_pose")
+        assert client.wait_for_server(timeout_sec=2.0)
 
         waypoints = [
             (1.0, 0.0, 0.0),
@@ -400,10 +401,10 @@ class TestNav2DemoNodeActionClient:
     def test_action_server_not_ready(self, rclpy_init):
         """测试 10: 服务端未就绪时客户端行为"""
         node = Node("test_not_ready")
-        client = node.create_client(NavigateToPose, "navigate_to_pose")
+        client = ActionClient(node, NavigateToPose, "navigate_to_pose")
 
         # 不启动 Mock Server，等待会超时
-        ready = client.wait_for_service(timeout_sec=1.0)
+        ready = client.wait_for_server(timeout_sec=1.0)
         assert not ready, "服务未启动时应返回 False"
 
         node.destroy_node()

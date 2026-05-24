@@ -23,23 +23,14 @@ BT::PortsList RetryNode::providedPorts()
 
 BT::NodeStatus RetryNode::tick()
 {
-  // 读取最大尝试次数
   max_attempts_ = getInput<int>("max_attempts").value_or(3);
 
-  // 如果子节点是 IDLE 状态（首次执行或刚重置），重置计数器
-  if (child_node_->status() == BT::NodeStatus::IDLE) {
-    attempt_count_ = 0;
-  }
-
-  // 记录当前尝试次数
   setOutput("retry_count", attempt_count_ + 1);
 
-  // 执行子节点
   auto status = child_node_->executeTick();
 
   switch (status) {
     case BT::NodeStatus::SUCCESS:
-      // 子节点成功，重置计数器并返回成功
       attempt_count_ = 0;
       return BT::NodeStatus::SUCCESS;
 
@@ -52,7 +43,6 @@ BT::NodeStatus RetryNode::tick()
         child_node_->haltNode();
         return BT::NodeStatus::RUNNING;
       } else {
-        // 所有重试均失败，记录报警
         RCLCPP_ERROR(rclcpp::get_logger("RetryNode"),
           "对接重试 %d/%d 全部失败！请检查充电桩或机器人状态。",
           attempt_count_, max_attempts_);

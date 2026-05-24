@@ -237,7 +237,7 @@ TEST(PatrolRoundCompletionTest, SetsPatrolCompleteAfterAllWaypoints)
                 goal="{current_waypoint}"
                 timeout="{navigation_timeout}"
                 nav_result="{nav_result}"/>
-              <Wait wait_duration="{waypoint_wait_duration}"/>
+              <Delay wait_duration="{waypoint_wait_duration}"/>
             </Sequence>
           </Repeat>
           <Script code="patrol_complete := true"/>
@@ -361,7 +361,7 @@ TEST(BreakpointResumeTest, ContinuesFromSavedIndexAfterCharge)
                 goal="{current_waypoint}"
                 timeout="{navigation_timeout}"
                 nav_result="{nav_result}"/>
-              <Wait wait_duration="{waypoint_wait_duration}"/>
+              <Delay wait_duration="{waypoint_wait_duration}"/>
             </Sequence>
           </Repeat>
           <Script code="patrol_complete := true"/>
@@ -489,7 +489,7 @@ TEST(ReturnToDockAndWaitTest, SuccessfullyCompletesReturnAndWait)
           </Fallback>
 
           <!-- Phase 3: Wait for round interval -->
-          <Wait wait_duration="{round_interval}"/>
+          <Delay wait_duration="{round_interval}"/>
         </Sequence>
       </BehaviorTree>
     </root>
@@ -564,7 +564,7 @@ TEST(FullRoundCycleTest, CompleteOneRoundPatrolReturnWaitReset)
                   goal="{current_waypoint}"
                   timeout="{navigation_timeout}"
                   nav_result="{nav_result}"/>
-                <Wait wait_duration="{waypoint_wait_duration}"/>
+                <Delay wait_duration="{waypoint_wait_duration}"/>
               </Sequence>
             </Repeat>
             <Script code="patrol_complete := true"/>
@@ -580,7 +580,7 @@ TEST(FullRoundCycleTest, CompleteOneRoundPatrolReturnWaitReset)
           </Fallback>
 
           <!-- Phase 3: Wait -->
-          <Wait wait_duration="{round_interval}"/>
+          <Delay wait_duration="{round_interval}"/>
 
           <!-- Phase 4: Round Reset -->
           <Script code="current_index := 0"/>
@@ -699,7 +699,7 @@ TEST(BreakpointContinueTest, InterruptChargeAndResumeCompleteRound)
                           goal="{current_waypoint}"
                           timeout="{navigation_timeout}"
                           nav_result="{nav_result}"/>
-                        <Wait wait_duration="{waypoint_wait_duration}"/>
+                        <Delay wait_duration="{waypoint_wait_duration}"/>
                       </Sequence>
                     </Repeat>
                     <Script code="patrol_complete := true"/>
@@ -736,7 +736,7 @@ TEST(BreakpointContinueTest, InterruptChargeAndResumeCompleteRound)
           </Fallback>
 
           <!-- Wait -->
-          <Wait wait_duration="{round_interval}"/>
+          <Delay wait_duration="{round_interval}"/>
 
           <!-- Reset -->
           <Script code="current_index := 0"/>
@@ -823,7 +823,7 @@ TEST(RoundIntervalWaitTest, ReadsIntervalFromBlackboard)
   const std::string xml = R"(
     <root BTCPP_format="4">
       <BehaviorTree ID="TestTree">
-        <Wait wait_duration="{round_interval}"/>
+        <Delay wait_duration="{round_interval}"/>
       </BehaviorTree>
     </root>
   )";
