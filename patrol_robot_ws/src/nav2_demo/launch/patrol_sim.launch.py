@@ -124,6 +124,13 @@ def generate_launch_description():
             output="screen",
             name="controller_server",
         ),
+        # 行为服务器（提供 spin/back_up/wait 恢复行为动作）
+        Node(
+            package="nav2_behaviors", executable="behavior_server",
+            parameters=[params_file],
+            output="screen",
+            name="behavior_server",
+        ),
         # 行为树导航器
         Node(
             package="nav2_bt_navigator", executable="bt_navigator",
@@ -140,6 +147,7 @@ def generate_launch_description():
                 "node_names": [
                     "planner_server",
                     "controller_server",
+                    "behavior_server",
                     "bt_navigator",
                 ],
             }],
