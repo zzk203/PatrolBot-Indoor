@@ -6,8 +6,8 @@ planner_server:
     planner_plugins: ["GridBased"]
     GridBased:
       plugin: "nav2_navfn_planner/NavfnPlanner"
-      tolerance: 0.5
-      use_astar: true
+      tolerance: 2.0
+      use_astar: false
       allow_unknown: true
 
 # ====== Nav2 局部控制器 (Local Controller) ======
@@ -139,7 +139,7 @@ global_costmap:
       origin_x: -50.0
       origin_y: -50.0
       resolution: 0.05
-      track_unknown_space: true
+      track_unknown_space: false
       always_send_full_costmap: true
       plugins: ["static_layer", "inflation_layer"]
       static_layer:
