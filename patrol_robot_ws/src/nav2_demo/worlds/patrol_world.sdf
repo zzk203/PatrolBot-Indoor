@@ -306,6 +306,32 @@
         </sensor>
       </link>
 
+      <!-- 虚拟相机（RGB 视觉，为 M5 视觉分段预留） -->
+      <link name="camera_link">
+        <pose>0.18 0 0.22 0 0 0</pose>
+        <inertial>
+          <mass>0.01</mass>
+          <inertia>
+            <ixx>0.00001</ixx><iyy>0.00001</iyy><izz>0.00001</izz>
+          </inertia>
+        </inertial>
+        <visual name="camera_visual">
+          <geometry><box><size>0.03 0.03 0.02</size></box></geometry>
+          <material><ambient>0.8 0.2 0.2 1</ambient></material>
+        </visual>
+        <sensor name="camera" type="camera">
+          <topic>camera/image_raw</topic>
+          <update_rate>10</update_rate>
+          <camera>
+            <horizontal_fov>1.047</horizontal_fov>
+            <image><width>640</width><height>480</height></image>
+            <clip><near>0.1</near><far>100</far></clip>
+          </camera>
+          <always_on>1</always_on>
+          <visualize>true</visualize>
+        </sensor>
+      </link>
+
       <!-- 关节 -->
       <joint name="left_wheel_joint" type="revolute">
         <parent>chassis</parent><child>left_wheel</child>
@@ -320,6 +346,9 @@
       </joint>
       <joint name="lidar_joint" type="fixed">
         <parent>chassis</parent><child>lidar_link</child>
+      </joint>
+      <joint name="camera_joint" type="fixed">
+        <parent>chassis</parent><child>camera_link</child>
       </joint>
 
       <!-- ====== 差速驱动插件 ====== -->

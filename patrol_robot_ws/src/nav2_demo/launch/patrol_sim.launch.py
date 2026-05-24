@@ -1,5 +1,5 @@
 import os
-from launch import LaunchDescription
+from launch import LaunchDescription, conditions
 from launch.actions import (
     DeclareLaunchArgument,
     ExecuteProcess,
@@ -21,12 +21,15 @@ def generate_launch_description():
     rviz_config = os.path.join(pkg_nav2_demo, "rviz", "nav2_view.rviz")
 
     use_sim_time = LaunchConfiguration("use_sim_time", default="true")
+    enable_keyboard = LaunchConfiguration("enable_keyboard", default="false")
 
     robot_description = {"robot_description": open(urdf_file).read()}
 
     return LaunchDescription([
         DeclareLaunchArgument("use_sim_time", default_value="true",
                               description="仿真时钟"),
+        DeclareLaunchArgument("enable_keyboard", default_value="false",
+                              description="启用键盘遥控节点 (true/false)"),
 
         # === 1. Gazebo 仿真世界 ===
         # trap + wait 确保 Ctrl+C 时同步终止 Gazebo 服务器和 GUI
@@ -51,19 +54,30 @@ def generate_launch_description():
                 "/scan@sensor_msgs/msg/PointCloud2[gz.msgs.PointCloudPacked",
                 # clock: Gazebo → ROS2
                 "/clock@rosgraph_msgs/msg/Clock[gz.msgs.Clock",
+                # camera image: Gazebo → ROS2
+                "/camera/image_raw@sensor_msgs/msg/Image[gz.msgs.Image",
             ],
             output="screen",
             name="ros_gz_bridge",
         ),
 
-        # === 3. 里程计帧名转换 ===
+        # === 3. 键盘遥控（可选，默认关闭） ===
+        # 使用示例: ros2 launch nav2_demo patrol_sim.launch.py enable_keyboard:=true
+        Node(
+            package="nav2_demo", executable="keyboard_teleop.py",
+            output="screen",
+            name="keyboard_teleop",
+            condition=conditions.IfCondition(enable_keyboard),
+        ),
+
+        # === 5. 里程计帧名转换 ===
         Node(
             package="nav2_demo", executable="odom_republisher.py",
             output="screen",
             name="odom_republisher",
         ),
 
-        # === 4. TF 静态变换 (base_footprint→base_link→lidar_link) ===
+        # === 6. TF 静态变换 (base_footprint→base_link→lidar_link) ===
         Node(
             package="robot_state_publisher", executable="robot_state_publisher",
             parameters=[robot_description, {"use_sim_time": use_sim_time}],
@@ -71,7 +85,7 @@ def generate_launch_description():
             name="robot_state_publisher",
         ),
 
-        # === 5. 点云→激光扫描 ===
+        # === 7. 点云→激光扫描 ===
         Node(
             package="nav2_demo", executable="pointcloud_to_scan.py",
             parameters=[{"target_frame": "lidar_link"}],
@@ -79,7 +93,7 @@ def generate_launch_description():
             name="pointcloud_to_scan",
         ),
 
-        # === 6. 静态地图发布器（替代 lifecycle map_server） ===
+        # === 8. 静态地图发布器（替代 lifecycle map_server） ===
         # map_server 是 lifecycle 节点，需要 lifecycle_manager 管理，
         # 直接用 Python 脚本发布，简化时序依赖
         Node(
@@ -92,7 +106,10 @@ def generate_launch_description():
             name="static_map_publisher",
         ),
 
-        # === 7. TF: map → odom（初始静态变换） ===
+        # === 9. TF: map → odom（初始引导变换） ===
+        # ⚠️ 此静态变换仅作为 AMCL 收敛前的初始引导。
+        # AMCL 启动后会动态发布正确的 map→odom 变换并覆盖此静态发布。
+        # 如果定位漂移严重，可移除本节点，让 AMCL 完全接管 TF。
         Node(
             package="tf2_ros", executable="static_transform_publisher",
             arguments=["--x", "-2.0", "--y", "-2.0", "--yaw", "0.0",
@@ -101,7 +118,7 @@ def generate_launch_description():
             name="map_to_odom_tf",
         ),
 
-        # === 8. AMCL 定位 ===
+        # === 10. AMCL 定位 ===
         Node(
             package="nav2_amcl", executable="amcl",
             parameters=[params_file, {"use_sim_time": use_sim_time}],
@@ -109,7 +126,7 @@ def generate_launch_description():
             name="amcl",
         ),
 
-        # === 9. Nav2 导航栈 + 生命周期管理 ===
+        # === 11. Nav2 导航栈 + 生命周期管理 ===
         # 全局规划器（内部创建 global_costmap）
         Node(
             package="nav2_planner", executable="planner_server",
@@ -159,7 +176,20 @@ def generate_launch_description():
             name="lifecycle_manager_navigation",
         ),
 
-        # === 10. RViz2 可视化 ===
+        # === 12. 电池模拟节点 (M4) ===
+        Node(
+            package="nav2_demo", executable="battery_simulator_node",
+            parameters=[{
+                "initial_percentage": 100.0,
+                "discharge_rate": 0.5,
+                "charge_rate": 5.0,
+                "publish_rate": 1.0,
+            }],
+            output="screen",
+            name="battery_simulator",
+        ),
+
+        # === 13. RViz2 可视化 ===
         Node(
             package="rviz2", executable="rviz2",
             arguments=["-d", rviz_config],

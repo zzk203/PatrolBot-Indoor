@@ -1,0 +1,73 @@
+<?xml version="1.0"?>
+<!--
+  M5.1 + M5.3 + M5.4: 低电回充子树 (ChargeRecovery) - 带视觉分段对接
+
+  功能:
+  1. 保存当前巡逻断点索引到 recovery_point_index
+  2. 使用 DockActionNode 完成分段对接：
+     a. 阶段 1 (NAVIGATE): 导航到对接预备位姿 (dock_prep_pose)
+     b. 阶段 2 (SERVO): 视觉伺服 P 控制器对准充电桩
+     c. 伺服阶段内部重试最多 3 次
+     d. 成功条件: 角度偏差 < 0.05 rad, 横向偏差 < 0.02 m
+  3. 对接成功后启用充电模式
+  4. 等待 10 秒模拟充电过程
+  5. 禁用充电模式
+  6. 重置低电标志和电池状态（设定满电 100%）
+  7. 恢复巡逻断点索引
+
+  黑板参数（由主树传入）:
+  - dock_prep_pose: PoseStamped   — 对接预备位姿（LoadWaypointsNode 输出）
+  - dock_pose_x/y/yaw: double     — 充电桩位姿（LoadWaypointsNode 输出）
+  - navigation_timeout: double     — 导航超时时间
+  - is_low_battery: bool           — 低电标志
+  - battery_level: float           — 当前电量
+  - recovery_point_index: int      — 恢复断点索引
+
+  依赖的自定义节点:
+  - DockActionNode (M5.1)
+  - SetChargingModeNode (M4.4)
+-->
+<root BTCPP_format="4">
+  <BehaviorTree ID="ChargeRecovery">
+
+    <Sequence name="charge_recovery_sequence">
+
+      <!-- Step 1: 记录当前巡逻断点（由主树在进入本子树前保存） -->
+      <Script code="recovery_point_index := {current_index}"/>
+
+      <!-- Step 2: 使用 DockActionNode 完成分段对接
+           DockActionNode 内部流程:
+           Phase 1 (NAVIGATE): 通过 Nav2 navigate_to_pose 导航到 dock_prep_pose
+           Phase 2 (SERVO):    P 控制器视觉伺服，发布 /cmd_vel
+           Retry:              伺服失败时内部重试最多 3 次
+      -->
+      <DockActionNode
+        dock_prep_pose="{dock_prep_pose}"
+        dock_pose_x="{dock_pose_x}"
+        dock_pose_y="{dock_pose_y}"
+        dock_pose_yaw="{dock_pose_yaw}"
+        navigation_timeout="{navigation_timeout}"
+        servo_timeout="15.0"
+        dock_success="{dock_success}"/>
+
+      <!-- Step 3: 启用充电模式 -->
+      <SetChargingModeNode enabled="true"/>
+
+      <!-- Step 4: 等待 10 秒模拟充电过程 (M5.4) -->
+      <Wait wait_duration="10.0"/>
+
+      <!-- Step 5: 禁用充电模式 -->
+      <SetChargingModeNode enabled="false"/>
+
+      <!-- Step 6: 重置低电标志和电池状态（设为满电） -->
+      <Script code="is_low_battery := false"/>
+      <Script code="battery_level := 100.0"/>
+
+      <!-- Step 7: 恢复巡逻索引（从断点继续巡逻） -->
+      <Script code="current_index := {recovery_point_index}"/>
+      <Script code="recovery_point_index := -1"/>
+
+    </Sequence>
+
+  </BehaviorTree>
+</root>

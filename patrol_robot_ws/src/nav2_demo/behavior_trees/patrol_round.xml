@@ -1,0 +1,93 @@
+<?xml version="1.0"?>
+<!--
+  M3.4 + M3.5 + M4.5 + M6.1: 巡逻序列行为树子树（支持轮次调度与断点恢复）
+
+  核心逻辑:
+  1. 计算剩余巡逻点数 (remaining = waypoints_count - current_index)
+  2. 使用 Repeat 循环遍历剩余巡逻点（remaining 为 0 时立即返回 SUCCESS）
+  3. 对每个点: 取点 → Fallback{导航超时 → 记录失败} → 停留
+  4. 所有点完成后设置 patrol_complete = true
+
+  M6.1 变更:
+  - 当 remaining = 0（所有点已访问完）时 Repeat 返回 SUCCESS
+  - 主树的 IsPatrolCompleteCondition 捕获该标志并跳转到下一阶段
+
+  堵赛放弃逻辑 (M3.5):
+  - NavigateToPoseNode 超时后返回 FAILURE
+  - Fallback 捕获 FAILURE 后执行 RecordFailureNode
+  - RecordFailureNode 记录失败 + 返回 SUCCESS
+  - Fallback 返回 SUCCESS → 巡逻继续执行下一个点
+
+  黑板参数（由主树传入）:
+  - waypoints_file: string              — YAML 文件路径
+  - patrol_waypoints: vector<Waypoint>  — 巡逻点列表
+  - charge_standby: Waypoint            — 充电预备点
+  - charge_dock: Waypoint               — 充电桩坐标
+  - waypoints_count: int                — 巡逻点数量
+  - navigation_timeout: double          — 导航超时时间（秒）
+  - waypoint_wait_duration: double      — 航点停留时间（秒）
+  - current_index: int                  — 当前巡逻索引（由主树维护）
+  - failure_count: int                  — 累计失败次数
+  - patrol_complete: bool               — 巡逻完成标志（输出）
+-->
+<root BTCPP_format="4">
+  <BehaviorTree ID="PatrolRound">
+
+    <Sequence name="patrol_main_sequence">
+
+      <!-- Step 1: 计算剩余巡逻点数（支持断点恢复） -->
+      <!-- 当从充电恢复时，current_index 可能 > 0 -->
+      <!-- 当 remaining = 0 时，Repeat 直接返回 SUCCESS -->
+      <Script code="remaining := {waypoints_count} - {current_index}"/>
+
+      <!-- Step 2: 巡逻循环 (Repeat 执行 remaining 次) -->
+      <!-- 若 remaining = 0, Repeat 立即返回 SUCCESS -->
+      <Repeat name="patrol_loop" num_cycles="{remaining}">
+
+        <Sequence name="visit_single_waypoint">
+
+          <!-- 2a. 获取当前索引对应的巡逻点（索引自增） -->
+          <NextWaypointNode
+            patrol_waypoints="{patrol_waypoints}"
+            current_index="{current_index}"
+            current_waypoint="{current_waypoint}"/>
+
+          <!-- 2b. 导航至目标 (含堵赛放弃 M3.5 + M7.2 告警日志) -->
+          <Fallback name="navigate_with_recovery">
+
+            <!-- 主导航节点 -->
+            <NavigateToPoseNode
+              goal="{current_waypoint}"
+              timeout="{navigation_timeout}"
+              nav_result="{nav_result}"/>
+
+            <!-- 备选: 记录失败后继续 + 发布告警 -->
+            <Sequence name="failure_recovery_sequence">
+              <RecordFailureNode
+                reason="timeout_or_failure"
+                failure_count="{failure_count}"
+                last_failure_reason="{last_failure_reason}"/>
+
+              <!-- M7.2: 构造堵塞告警消息并发布 -->
+              <Script code="alert_msg := 'Waypoint ' + {current_index} + ' blocked'"/>
+              <LogAlertNode
+                alert_msg="{alert_msg}"
+                severity="ERROR"/>
+            </Sequence>
+
+          </Fallback>
+
+          <!-- 2c. 到达后短暂停留 -->
+          <Wait wait_duration="{waypoint_wait_duration}"/>
+
+        </Sequence>
+
+      </Repeat>
+
+      <!-- Step 3: 标记巡逻完成（供主树 IsPatrolCompleteCondition 使用） -->
+      <Script code="patrol_complete := true"/>
+
+    </Sequence>
+
+  </BehaviorTree>
+</root>

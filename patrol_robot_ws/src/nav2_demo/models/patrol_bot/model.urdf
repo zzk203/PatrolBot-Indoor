@@ -11,6 +11,7 @@
   <link name="base_footprint"/>
   <link name="base_link"/>
   <link name="lidar_link"/>
+  <link name="camera_link"/>
   <link name="chassis">
     <visual>
       <geometry><box size="0.4 0.3 0.15"/></geometry>
@@ -36,5 +37,12 @@
     <parent link="base_link"/>
     <child link="lidar_link"/>
     <origin xyz="0.1 0 0.1" rpy="0 0 0"/>
+  </joint>
+
+  <!-- base_link → camera_link: 相机前方顶部安装 -->
+  <joint name="camera_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="camera_link"/>
+    <origin xyz="0.18 0 0.12" rpy="0 0 0"/>
   </joint>
 </robot>

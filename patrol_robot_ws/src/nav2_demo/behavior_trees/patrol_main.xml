@@ -1,0 +1,221 @@
+<?xml version="1.0"?>
+<!--
+  M6.4: 轮次调度与完整任务编排主行为树
+
+  核心逻辑 (轮次循环):
+  ┌─────────────────────────────────────────────────────────────────────┐
+  │  Sequence (初始化)                                                  │
+  │  ├─ Script: 设置所有黑板参数和标志                                   │
+  │  ├─ LoadWaypointsNode: 加载巡逻点配置                               │
+  │  └─ Repeat(max_rounds)                                             │
+  │       └─ Sequence(one_round)                                       │
+  │            ├─ Repeat(∞)  ← 内层巡逻循环                             │
+  │            │   └─ Sequence                                         │
+  │            │       ├─ Inverter(IsPatrolCompleteCondition) ← 跳出条件 │
+  │            │       └─ Fallback                                     │
+  │            │           ├─ ReactiveSequence{BatteryMonitor|PatrolRound}│
+  │            │           └─ Sequence{IsBatteryLow|Save|ChargeRecovery} │
+  │            ├─ ReturnToDock (NavigateToPoseNode → dock_prep_pose)   │
+  │            ├─ Wait(round_interval)     ← M6.3 轮次间隔等待         │
+  │            └─ Script: 轮次重置         ← M6.6 索引归零+轮次递增    │
+  └─────────────────────────────────────────────────────────────────────┘
+
+  轮次流程:
+  1. 内层巡逻循环:
+     a. IsPatrolCompleteCondition 检查巡逻是否完成
+        - 已完成 → Inverter 返回 FAILURE → 内层 Repeat 终止
+        - 未完成 → 继续执行 Fallback
+     b. Fallback 优先尝试巡逻（带低电中断）:
+        - ReactiveSequence{BatteryMonitor + PatrolRound}
+        - 电量正常时 PatrolRound 执行（可能返回 RUNNING）
+        - 低电时 BatteryMonitor 返回 FAILURE → ReactiveSequence 中断
+     c. Fallback 备选: 低电回充:
+        - IsBatteryLowCondition 确认低电
+        - 保存断点索引 → ChargeRecovery 子树（导航+对接+充电+恢复）
+        - 充电完成后 PatrolRound 继续从断点执行
+     d. 巡逻完成时 PatrolRound 设置 patrol_complete = true
+        → 下一 tick Inverter 返回 FAILURE → 跳出内层循环
+
+  2. 返回待命点 (ReturnToDock):
+     - 使用 NavigateToPoseNode 导航到 dock_prep_pose (charge_standby)
+     - 通过 Fallback{导航 | AlwaysSuccess} 保证即使导航失败也继续
+
+  3. 轮次间隔等待:
+     - 使用 Wait 节点等待 round_interval 秒（从黑板读取）
+
+  4. 轮次重置:
+     - current_index = 0（下一轮从头开始巡逻）
+     - round_count += 1（累计轮次数）
+     - failure_count = 0（清零失败计数）
+     - patrol_complete = false（清除完成标志，准备下一轮）
+
+  M6.5 断点续巡逻:
+  - ChargeRecovery 保存 current_index 到 recovery_point_index
+  - 充电完成后恢复 current_index
+  - 内层循环继续执行 PatrolRound（remaining = 剩余点数）
+  - 一轮内不重置索引
+
+  M6.6 轮次重置:
+  - 一轮结束后索引归零，round_count++
+  - 等待固定间隔后重新开始
+
+  黑板键:
+  - waypoints_file: string              — YAML 文件路径
+  - battery_threshold: float            — 低电阈值（%）
+  - is_low_battery: bool               — 低电标志
+  - battery_level: float               — 当前电量
+  - recovery_point_index: int          — 回充前的巡逻断点索引
+  - current_index: int                 — 当前巡逻点索引
+  - failure_count: int                 — 累计失败次数
+  - patrol_complete: bool              — 巡逻完成标志
+  - dock_success: bool                 — 对接成功标志
+  - round_count: int                   — 已完成的轮次数
+  - round_interval: double             — 轮次间隔等待时间（秒）
+  - max_rounds: int                    — 最大轮次数
+  - nav_result: string                 — 导航结果
+
+  依赖的自定义节点:
+  - LoadWaypointsNode, NextWaypointNode, NavigateToPoseNode,
+    RecordFailureNode, BatteryMonitorNode, IsBatteryLowCondition,
+    IsPatrolCompleteCondition, SetChargingModeNode, DockActionNode
+-->
+<root BTCPP_format="4">
+  <BehaviorTree ID="PatrolMain">
+
+    <Sequence name="root_sequence">
+
+      <!-- ======== 初始化参数 ======== -->
+      <Script code="waypoints_file := '/home/zzk/PatrolBot-Indoor/patrol_robot_ws/src/nav2_demo/config/waypoints.yaml'"/>
+      <Script code="battery_threshold := 20.0"/>
+      <Script code="is_low_battery := false"/>
+      <Script code="battery_level := 100.0"/>
+      <Script code="recovery_point_index := -1"/>
+      <Script code="patrol_complete := false"/>
+      <Script code="dock_success := false"/>
+
+      <!-- 加载巡逻点配置 -->
+      <LoadWaypointsNode
+        waypoints_file="{waypoints_file}"
+        patrol_waypoints="{patrol_waypoints}"
+        charge_standby="{charge_standby}"
+        charge_dock="{charge_dock}"
+        dock_prep_pose="{dock_prep_pose}"
+        dock_pose_x="{dock_pose_x}"
+        dock_pose_y="{dock_pose_y}"
+        dock_pose_yaw="{dock_pose_yaw}"
+        waypoints_count="{waypoints_count}"
+        navigation_timeout="{navigation_timeout}"
+        waypoint_wait_duration="{waypoint_wait_duration}"/>
+
+      <!-- 初始化巡逻索引和轮次参数 -->
+      <Script code="current_index := 0"/>
+      <Script code="failure_count := 0"/>
+      <Script code="round_count := 0"/>
+      <!-- M6.3: 轮次间隔时间（秒），可通过黑板参数化配置 -->
+      <Script code="round_interval := 10.0"/>
+      <Script code="max_rounds := 1000000"/>
+
+      <!-- ======== 主循环: 轮次调度 ======== -->
+      <Repeat name="round_loop" num_cycles="{max_rounds}">
+
+        <Sequence name="one_round">
+
+          <!-- ========================================================== -->
+          <!-- Phase 1: 内层巡逻循环（含低电中断与回充恢复）                -->
+          <!-- ========================================================== -->
+          <Repeat name="inner_patrol_loop" num_cycles="1000000">
+
+            <Sequence name="inner_patrol_sequence">
+
+              <!--
+                跳出条件: 使用 Inverter 反转 IsPatrolCompleteCondition
+                - 巡逻未完成: IsPatrolComplete 返回 FAILURE
+                               → Inverter 返回 SUCCESS → 继续巡逻
+                - 巡逻已完成: IsPatrolComplete 返回 SUCCESS
+                               → Inverter 返回 FAILURE → Sequence 返回 FAILURE
+                               → Repeat 终止 (子节点 FAILURE 时 Repeat 终止)
+              -->
+              <Inverter name="check_patrol_complete">
+                <IsPatrolCompleteCondition patrol_complete="{patrol_complete}"/>
+              </Inverter>
+
+              <!-- 巡逻或回充 Fallback -->
+              <Fallback name="patrol_or_charge_fallback">
+
+                <!-- 分支 A: 巡逻（带低电中断的 ReactiveSequence） -->
+                <ReactiveSequence name="patrol_with_battery_interrupt">
+
+                  <!--
+                    BatteryMonitorNode:
+                    - 每次 tick 都会执行（ReactiveSequence 特性）
+                    - 订阅 /battery_state，比较电量与阈值
+                    - 返回 SUCCESS(电量正常) 或 FAILURE(低电)
+                    - 低电时 ReactiveSequence 立即中断巡逻
+                  -->
+                  <BatteryMonitorNode
+                    battery_threshold="{battery_threshold}"
+                    battery_level="{battery_level}"
+                    is_low_battery="{is_low_battery}"/>
+
+                  <!-- 巡逻子树（执行剩余巡逻点） -->
+                  <SubTree ID="PatrolRound"/>
+
+                </ReactiveSequence>
+
+                <!-- 分支 B: 低电回充 -->
+                <Sequence name="low_battery_charge_sequence">
+
+                  <IsBatteryLowCondition is_low_battery="{is_low_battery}"/>
+
+                  <!-- 保存当前巡逻索引到断点 -->
+                  <Script code="recovery_point_index := {current_index}"/>
+
+                  <!-- 执行回充子树（导航+对接+充电+恢复索引） -->
+                  <SubTree ID="ChargeRecovery"/>
+
+                </Sequence>
+
+              </Fallback>
+
+            </Sequence>
+
+          </Repeat>
+          <!-- ====== 内层巡逻循环结束 ====== -->
+
+          <!-- ========================================================== -->
+          <!-- Phase 2: M6.2 返回待命点 (ReturnToDock)                    -->
+          <!-- ========================================================== -->
+          <!--
+            使用 NavigateToPoseNode 导航到 dock_prep_pose（即 charge_standby）。
+            Fallback + AlwaysSuccess 确保即使导航失败也不阻塞后续流程。
+          -->
+          <Fallback name="return_to_dock_fallback">
+            <NavigateToPoseNode
+              goal="{dock_prep_pose}"
+              timeout="{navigation_timeout}"
+              nav_result="{nav_result}"/>
+            <AlwaysSuccess/>
+          </Fallback>
+
+          <!-- ========================================================== -->
+          <!-- Phase 3: M6.3 轮次间隔等待                                  -->
+          <!-- ========================================================== -->
+          <Wait wait_duration="{round_interval}"/>
+
+          <!-- ========================================================== -->
+          <!-- Phase 4: M6.6 轮次重置                                     -->
+          <!-- ========================================================== -->
+          <Script code="current_index := 0"/>
+          <Script code="round_count := {round_count} + 1"/>
+          <Script code="failure_count := 0"/>
+          <Script code="patrol_complete := false"/>
+
+        </Sequence>
+
+      </Repeat>
+      <!-- ====== 主轮次循环结束 ====== -->
+
+    </Sequence>
+
+  </BehaviorTree>
+</root>
