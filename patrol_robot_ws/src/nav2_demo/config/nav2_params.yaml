@@ -29,7 +29,7 @@ bt_navigator:
     use_sim_time: true
     global_frame: map
     robot_base_frame: base_footprint
-    transform_tolerance: 0.1
+    transform_tolerance: 1.0
     default_bt_xml_filename: "navigate_w_replanning_and_recovery.xml"
     plugin_lib_names:
       - "nav2_compute_path_to_pose_action_bt_node"
@@ -85,7 +85,7 @@ global_costmap:
       use_sim_time: true
       global_frame: map
       robot_base_frame: base_footprint
-      transform_tolerance: 0.2
+      transform_tolerance: 1.0
       robot_radius: 0.22
       footprint: "[[-0.20, -0.15], [-0.20, 0.15], [0.20, 0.15], [0.20, -0.15]]"
       footprint_padding: 0.03
@@ -116,7 +116,7 @@ local_costmap:
       use_sim_time: true
       global_frame: odom
       robot_base_frame: base_footprint
-      transform_tolerance: 0.2
+      transform_tolerance: 1.0
       robot_radius: 0.22
       footprint: "[[-0.20, -0.15], [-0.20, 0.15], [0.20, 0.15], [0.20, -0.15]]"
       footprint_padding: 0.03
