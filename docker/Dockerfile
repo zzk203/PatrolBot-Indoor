@@ -15,6 +15,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ros-humble-behaviortree-cpp \
     ros-humble-ros-gz-sim \
     ros-humble-ros-gz-bridge \
+    libyaml-cpp-dev \
+    python3-pytest \
     && rm -rf /var/lib/apt/lists/*
 
 RUN echo "source /opt/ros/humble/setup.bash" >> /root/.bashrc

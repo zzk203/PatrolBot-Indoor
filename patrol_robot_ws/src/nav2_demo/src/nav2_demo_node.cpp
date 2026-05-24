@@ -185,11 +185,8 @@ void Nav2DemoNode::result_callback(const GoalHandleNav::WrappedResult &result)
     case rclcpp_action::ResultCode::ABORTED:
       RCLCPP_ERROR(this->get_logger(), "❌ 航点 %zu 失败（ABORTED）", goal_index_ + 1);
       if (result.code != rclcpp_action::ResultCode::SUCCEEDED) {
-        // 输出错误信息（如果存在）
-        if (result.result) {
-          RCLCPP_ERROR(this->get_logger(), "   错误码: %d",
-                       result.result->error_code);
-        }
+        RCLCPP_ERROR(this->get_logger(), "   导航失败，结果码: %d",
+                     static_cast<int>(result.code));
       }
       break;
     default:

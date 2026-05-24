@@ -46,13 +46,10 @@ BT::NodeStatus RetryNode::tick()
     case BT::NodeStatus::FAILURE: {
       attempt_count_++;
       if (attempt_count_ < max_attempts_) {
-        // 还有重试次数，先停止子节点再重置状态
         RCLCPP_WARN(rclcpp::get_logger("RetryNode"),
           "重试 %d/%d: 子节点失败，即将重试",
           attempt_count_, max_attempts_);
-        child_node_->halt();
-        child_node_->resetStatus();
-        // 返回 RUNNING 让父节点继续 tick 我们
+        child_node_->haltNode();
         return BT::NodeStatus::RUNNING;
       } else {
         // 所有重试均失败，记录报警

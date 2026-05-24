@@ -9,6 +9,7 @@
 #include <gtest/gtest.h>
 #include <filesystem>
 #include <fstream>
+#include <yaml-cpp/exceptions.h>
 
 #include "nav2_demo/bt_nodes/load_waypoints_node.hpp"
 #include "nav2_demo/bt_nodes/waypoint_structs.hpp"
@@ -160,7 +161,7 @@ TEST_F(LoadWaypointsParseTest, HandlesMalformedYaml)
   // Act & Assert (should throw YAML exception)
   EXPECT_THROW(
     nav2_demo::LoadWaypointsNode::parseYaml(tmp_file_),
-    YAML::Exception
+    YAML::ParserException
   );
 }
 

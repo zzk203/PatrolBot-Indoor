@@ -149,7 +149,7 @@ protected:
 
   /// @brief 创建 VisualServoNode 并注入位姿源
   std::unique_ptr<nav2_demo::VisualServoNode> createServoNode(
-    VisualServoNode::PoseSourceCallback pose_source)
+    nav2_demo::VisualServoNode::PoseSourceCallback pose_source)
   {
     auto node = std::make_unique<nav2_demo::VisualServoNode>(
       "servo", BT::NodeConfig(), test_node_);
@@ -291,8 +291,9 @@ TEST_F(VisualServoNodeTest, TimeoutReturnsFailure)
   // Assert: 超时应该失败
   EXPECT_EQ(status, BT::NodeStatus::FAILURE);
 
-  // 验证 dock_success 为 false
-  bool dock_success = node->getInput<bool>("dock_success").value_or(true);
+  // 验证超时后 dock_success 未设置
+  bool dock_success = true;
+  node->config().blackboard->get<bool>("dock_success", dock_success);
   EXPECT_FALSE(dock_success);
 }
 
