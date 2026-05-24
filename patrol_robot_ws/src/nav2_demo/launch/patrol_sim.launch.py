@@ -29,8 +29,11 @@ def generate_launch_description():
                               description="仿真时钟"),
 
         # === 1. Gazebo 仿真世界 ===
+        # trap + wait 确保 Ctrl+C 时同步终止 Gazebo 服务器和 GUI
         ExecuteProcess(
-            cmd=["ign", "gazebo", "-r", "-v", "2", world_file],
+            cmd=["bash", "-c",
+                 f"trap 'kill 0' INT TERM; ign gazebo -r -v 2 {world_file} & "
+                 "PID=$!; wait $PID; kill 0 2>/dev/null"],
             output="screen",
             name="gazebo",
         ),
