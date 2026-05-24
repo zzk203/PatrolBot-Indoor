@@ -32,8 +32,15 @@ controller_server:
       plugin: "nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController"
       desired_linear_vel: 0.26
       lookahead_dist: 0.6
+      min_lookahead_dist: 0.3
+      max_lookahead_dist: 0.9
       max_linear_accel: 2.5
       min_approach_linear_velocity_ratio: 0.05
+      use_regulated_linear_velocity_scaling: true
+      use_rotate_to_heading: true
+      rotate_to_heading_angular_vel: 1.8
+      rotate_to_heading_min_angle: 0.785
+      max_angular_accel: 3.2
 
 # ====== Nav2 行为树导航器 ======
 bt_navigator:
