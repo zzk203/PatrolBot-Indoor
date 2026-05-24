@@ -39,7 +39,7 @@ controller_server:
       use_regulated_linear_velocity_scaling: true
       use_rotate_to_heading: true
       rotate_to_heading_angular_vel: 1.8
-      rotate_to_heading_min_angle: 0.785
+      rotate_to_heading_min_angle: 0.2
       max_angular_accel: 3.2
 
 # ====== Nav2 行为树导航器 ======
