@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root BTCPP_format="4">
+  <BehaviorTree ID="PatrolBehavior">
+    <ReactiveSequence>
+      <Condition ID="IsNotStopped"/>
+      <Condition ID="IsNotPaused"/>
+      <ReactiveFallback>
+        <Sequence>
+          <Condition ID="IsBatteryLow"/>
+          <Action ID="SavePatrolContext"/>
+          <Action ID="NavigateToCharger"/>
+          <Action ID="SimulateCharging"/>
+        </Sequence>
+        <ReactiveSequence>
+          <Action ID="LoadRoutes"/>
+          <Action ID="RestorePatrolContext"/>
+          <Loop num_cycles="-1">
+            <Sequence>
+              <Action ID="SetRouteContext"/>
+              <Loop num_cycles="-1">
+                <Sequence>
+                  <Action ID="NavigateToWaypoint"/>
+                  <Action ID="WaitAtWaypoint"/>
+                  <Action ID="CaptureImage"/>
+                  <ReactiveFallback>
+                    <Sequence>
+                      <Condition ID="HasAlarm"/>
+                      <Condition ID="IsAlarmCritical"/>
+                      <Action ID="HandleAlarm"/>
+                    </Sequence>
+                    <Sequence>
+                      <Condition ID="HasAlarm"/>
+                      <Action ID="HandleAlarm"/>
+                    </Sequence>
+                  </ReactiveFallback>
+                </Sequence>
+              </Loop>
+            </Sequence>
+          </Loop>
+        </ReactiveSequence>
+      </ReactiveFallback>
+    </ReactiveSequence>
+  </BehaviorTree>
+</root>

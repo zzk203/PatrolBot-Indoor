@@ -1,0 +1,56 @@
+# 充电桩位姿（必填）
+charging_station:
+  x: 1.5
+  y: 0.8
+  yaw: 0.0
+
+# 电池参数（必填）
+battery:
+  initial_level: 100.0
+  low_threshold: 20.0
+  recovery_threshold: 95.0
+  discharge_rate:
+    moving: 0.5
+  charge_rate: 2.0
+
+# 摄像头配置（可选）
+camera:
+  topic: "/camera/image_raw"
+  image_format: "png"
+  save_directory: "images"
+
+# Nav2 参数（必填）
+nav2:
+  waypoint_timeout: 120.0
+
+# 巡逻路线（必填，至少1条）
+patrol_routes:
+  - name: "主通道巡检"
+    priority: 1
+    waypoints:
+      - x: 2.0
+        y: 1.0
+        yaw: 0.0
+        wait_seconds: 5
+      - x: 5.0
+        y: 3.0
+        yaw: 1.57
+        wait_seconds: 3
+        alarm_simulate:
+          type: smoke_detected
+          severity: warning
+
+  - name: "办公区巡检"
+    priority: 2
+    waypoints:
+      - x: -2.0
+        y: 4.0
+        yaw: 3.14
+        wait_seconds: 8
+        alarm_simulate:
+          type: temperature_high
+          severity: critical
+      - x: 0.0
+        y: 6.0
+        yaw: -1.57
+        wait_seconds: 4

@@ -24,6 +24,7 @@
 - 主包路径：`/home/zzk/PatrolBot-Indoor/patrol_robot_ws/src/patrol_bot`
 - 消息包路径：`/home/zzk/PatrolBot-Indoor/patrol_robot_ws/src/patrol_bot_interfaces`
 - 设计文档：`/home/zzk/PatrolBot-Indoor/doc/`
+- docker配置的ros2环境启动：`/home/zzk/PatrolBot-Indoor/docker/`
 
 ```
 patrol_robot_ws/src/
@@ -94,7 +95,7 @@ patrol_robot_ws/src/
 
 ## 执行模式
 
-- **主 agent（你）**：负责跟踪整体进度，按顺序调度子 agent 完成各个模块。每完成一个模块后更新 `doc/tasks/progress.md` 中的状态。
+- **主 agent（你）**：负责跟踪整体进度，按顺序调度子 agent 完成各个模块，子agent完成后你需要进行验收（实际运行测试）和审计，若验收不通过你需要子agent修改。每完成一个模块后更新 `doc/tasks/progress.md` 中的状态。
 - **子 agent（executor）**：负责实现单个模块的完整代码（头文件 + 源文件 + 单元测试），完成后验证编译通过且测试通过。
 - **整个过程中不会有人工参与**。遇到错误时子 agent 需自行修复，主 agent 负责重试和调度。
 
@@ -178,11 +179,11 @@ patrol_robot_ws/src/
 - 导航超时跳过：跳过当前点、日志、继续
 - pause/resume：状态校验、BT 暂停/恢复
 
-## 构建与验证命令
+## 构建与验证命令（docker环境中）
 
 ```bash
 # 编译
-cd /home/zzk/PatrolBot-Indoor/patrol_robot_ws
+cd /root/patrol_robot_ws/
 colcon build --packages-select patrol_bot_interfaces patrol_bot --cmake-args -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
 # 运行测试
