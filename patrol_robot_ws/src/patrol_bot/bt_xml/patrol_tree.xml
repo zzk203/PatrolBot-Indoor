@@ -2,41 +2,40 @@
 <root BTCPP_format="4">
   <BehaviorTree ID="PatrolBehavior">
     <ReactiveSequence>
-      <Condition ID="IsNotStopped"/>
-      <Condition ID="IsNotPaused"/>
+      <IsNotStopped/>
+      <IsNotPaused/>
       <ReactiveFallback>
         <Sequence>
-          <Condition ID="IsBatteryLow"/>
-          <Action ID="SavePatrolContext"/>
-          <Action ID="NavigateToCharger"/>
-          <Action ID="SimulateCharging"/>
+          <IsBatteryLow battery_level="{battery_level}" low_threshold="{low_threshold}"/>
+          <SavePatrolContext current_route_index="{current_route_index}" current_waypoint_idx="{current_waypoint_index}"/>
+          <NavigateToCharger charging_station="{charging_station}"/>
+          <SimulateCharging recovery_threshold="{recovery_threshold}" battery_level="{battery_level}"/>
         </Sequence>
         <ReactiveSequence>
-          <Action ID="LoadRoutes"/>
-          <Action ID="RestorePatrolContext"/>
-          <Loop num_cycles="-1">
+          <RestorePatrolContext saved_route_index="{saved_route_index}" saved_waypoint_idx="{saved_waypoint_idx}" patrol_routes="{patrol_routes}" current_route_index="{current_route_index}" current_waypoint_idx="{current_waypoint_index}" current_waypoint="{current_waypoint}"/>
+          <Repeat num_cycles="-1">
             <Sequence>
-              <Action ID="SetRouteContext"/>
-              <Loop num_cycles="-1">
+              <SetRouteContext current_route_index="{current_route_index}" patrol_routes="{patrol_routes}" current_route="{current_route}"/>
+              <Repeat num_cycles="-1">
                 <Sequence>
-                  <Action ID="NavigateToWaypoint"/>
-                  <Action ID="WaitAtWaypoint"/>
-                  <Action ID="CaptureImage"/>
+                  <NavigateToWaypoint current_route="{current_route}" current_waypoint_index="{current_waypoint_index}" nav_timeout="{nav_timeout}" current_waypoint="{current_waypoint}"/>
+                  <WaitAtWaypoint current_waypoint="{current_waypoint}"/>
+                  <CaptureImage current_route_index="{current_route_index}" current_waypoint_idx="{current_waypoint_index}"/>
                   <ReactiveFallback>
                     <Sequence>
-                      <Condition ID="HasAlarm"/>
-                      <Condition ID="IsAlarmCritical"/>
-                      <Action ID="HandleAlarm"/>
+                      <HasAlarm current_waypoint="{current_waypoint}"/>
+                      <IsAlarmCritical current_waypoint="{current_waypoint}"/>
+                      <HandleAlarm current_waypoint="{current_waypoint}"/>
                     </Sequence>
                     <Sequence>
-                      <Condition ID="HasAlarm"/>
-                      <Action ID="HandleAlarm"/>
+                      <HasAlarm current_waypoint="{current_waypoint}"/>
+                      <HandleAlarm current_waypoint="{current_waypoint}"/>
                     </Sequence>
                   </ReactiveFallback>
                 </Sequence>
-              </Loop>
+              </Repeat>
             </Sequence>
-          </Loop>
+          </Repeat>
         </ReactiveSequence>
       </ReactiveFallback>
     </ReactiveSequence>

@@ -31,6 +31,8 @@ void Nav2ActionClient::send_goal(double x, double y, double yaw) {
         return;
     }
 
+    cancel_goal();
+
     auto goal_msg = nav2_msgs::action::NavigateToPose::Goal();
     goal_msg.pose.header.frame_id = "map";
     goal_msg.pose.header.stamp = node_->now();

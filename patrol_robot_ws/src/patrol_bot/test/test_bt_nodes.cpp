@@ -368,7 +368,6 @@ TEST(BtNodesTest, SavePatrolContext_Logic) {
 // ==================== RestorePatrolContext 逻辑测试 ====================
 
 TEST(BtNodesTest, RestorePatrolContext_Logic) {
-    // 有断点恢复
     int saved_route_index = 1;
     int saved_waypoint_idx = 3;
 
@@ -380,17 +379,10 @@ TEST(BtNodesTest, RestorePatrolContext_Logic) {
     EXPECT_EQ(restored_route, 1);
     EXPECT_EQ(restored_wp, 3);
 
-    // 清除断点
     saved_route_index = -1;
     saved_waypoint_idx = -1;
     has_checkpoint = (saved_route_index != -1 && saved_waypoint_idx != -1);
     EXPECT_FALSE(has_checkpoint);
-
-    // 无断点从头开始
-    restored_route = 0;
-    restored_wp = 0;
-    EXPECT_EQ(restored_route, 0);
-    EXPECT_EQ(restored_wp, 0);
 }
 
 // ==================== 状态常量验证 ====================
@@ -447,31 +439,6 @@ TEST(BtNodesTest, SetRouteContext_OutOfRange) {
     idx = 0;
     out_of_range = (idx < 0 || idx >= static_cast<int>(routes.size()));
     EXPECT_FALSE(out_of_range);
-}
-
-// ==================== LoadRoutes 数据提取 ====================
-
-TEST(BtNodesTest, LoadRoutes_DataExtraction) {
-    patrol_bot::Config config;
-    config.charging_station = {1.0, 2.0, 0.0};
-    config.battery.low_threshold = 20.0;
-    config.battery.recovery_threshold = 95.0;
-    config.waypoint_timeout = 120.0;
-
-    patrol_bot::Route route;
-    route.name = "test_route";
-    route.priority = 1;
-    patrol_bot::Waypoint wp;
-    wp.pose = {0.0, 0.0, 0.0};
-    wp.wait_seconds = 5.0;
-    route.waypoints.push_back(wp);
-    config.routes.push_back(route);
-
-    EXPECT_EQ(config.routes.size(), 1u);
-    EXPECT_EQ(config.charging_station.x, 1.0);
-    EXPECT_EQ(config.battery.low_threshold, 20.0);
-    EXPECT_EQ(config.battery.recovery_threshold, 95.0);
-    EXPECT_EQ(config.waypoint_timeout, 120.0);
 }
 
 // ==================== CaptureImage 文件名 ====================

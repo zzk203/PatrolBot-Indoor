@@ -13,6 +13,7 @@
 #include "patrol_bot/camera_buffer.hpp"
 #include "patrol_bot/bt_nodes.hpp"
 #include "patrol_bot_interfaces/msg/patrol_status.hpp"
+#include <ament_index_cpp/get_package_share_directory.hpp>
 
 #include <memory>
 #include <string>
@@ -27,8 +28,11 @@ public:
     PatrolBotNode()
         : Node("patrol_bot_node") {
 
+        // 获取包安装路径
+        const std::string share_dir = ament_index_cpp::get_package_share_directory("patrol_bot");
+
         // --- 阶段 1: 参数声明 ---
-        declare_parameter("config_path", "config/patrol_config.yaml");
+        declare_parameter("config_path", share_dir + "/config/patrol_config.yaml");
 
         // --- 阶段 2: 配置加载 (fail-fast) ---
         try {
@@ -71,20 +75,26 @@ public:
         // --- 阶段 5: 黑板初始化 ---
         blackboard_ = BT::Blackboard::create();
         blackboard_->set("config", config_);
-        blackboard_->set("patrol_state", static_cast<int>(PatrolState::IDLE));
+        blackboard_->set("patrol_state", static_cast<int>(PatrolState::PATROLLING));
         blackboard_->set("battery_level", config_.battery.initial_level);
         blackboard_->set("saved_route_index", -1);
         blackboard_->set("saved_waypoint_idx", -1);
         blackboard_->set("current_route_index", 0);
         blackboard_->set("current_waypoint_index", 0);
+        blackboard_->set("low_threshold", config_.battery.low_threshold);
+        blackboard_->set("recovery_threshold", config_.battery.recovery_threshold);
+        blackboard_->set("charging_station", config_.charging_station);
+        blackboard_->set("nav_timeout", config_.waypoint_timeout);
+        blackboard_->set("patrol_routes", config_.routes);
 
         // --- 阶段 6: BT 工厂注册 ---
         BT::BehaviorTreeFactory factory;
         register_nodes(factory);
 
         // --- 阶段 7: BT 实例化 ---
+        std::string bt_xml_path = share_dir + "/bt_xml/patrol_tree.xml";
         tree_ = std::make_unique<BT::Tree>(
-            factory.createTreeFromFile("bt_xml/patrol_tree.xml", blackboard_));
+            factory.createTreeFromFile(bt_xml_path, blackboard_));
 
         // --- 阶段 8: ROS2 接口 ---
         // Service Servers
@@ -174,12 +184,6 @@ private:
         factory.registerNodeType<IsAlarmCritical>("IsAlarmCritical");
 
         // === SyncAction Nodes (RegisterBuilder for logger injection) ===
-        BT::NodeBuilder builder_load_routes =
-            [this](const std::string& name, const BT::NodeConfig& config) {
-                return std::make_unique<LoadRoutes>(name, config, logger_);
-            };
-        factory.registerBuilder<LoadRoutes>("LoadRoutes", builder_load_routes);
-
         BT::NodeBuilder builder_restore_ctx =
             [this](const std::string& name, const BT::NodeConfig& config) {
                 return std::make_unique<RestorePatrolContext>(name, config, logger_);

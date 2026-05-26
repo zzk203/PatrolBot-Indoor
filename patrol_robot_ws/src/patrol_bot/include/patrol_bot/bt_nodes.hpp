@@ -37,16 +37,6 @@ public:
 
 // ==================== SyncAction 节点 ====================
 
-class LoadRoutes : public BT::SyncActionNode {
-public:
-    LoadRoutes(const std::string& name, const BT::NodeConfig& config,
-               std::shared_ptr<PatrolLogger> logger);
-    static BT::PortsList providedPorts();
-    BT::NodeStatus tick() override;
-private:
-    std::shared_ptr<PatrolLogger> logger_;
-};
-
 class RestorePatrolContext : public BT::SyncActionNode {
 public:
     RestorePatrolContext(const std::string& name, const BT::NodeConfig& config,
@@ -120,6 +110,10 @@ private:
     std::shared_ptr<PatrolLogger> logger_;
     std::chrono::steady_clock::time_point start_time_;
     double nav_timeout_ = 120.0;
+    int waypoint_count_ = 0;
+    double target_x_ = 0.0;
+    double target_y_ = 0.0;
+    double target_yaw_ = 0.0;
 };
 
 class NavigateToCharger : public BT::StatefulActionNode {

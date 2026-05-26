@@ -1,58 +1,84 @@
 import os
 from launch import LaunchDescription
-from launch.actions import IncludeLaunchDescription
+from launch.actions import (
+    DeclareLaunchArgument,
+    ExecuteProcess,
+    IncludeLaunchDescription,
+)
 from launch.launch_description_sources import PythonLaunchDescriptionSource
+from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 from ament_index_python.packages import get_package_share_directory
 
 
 def generate_launch_description():
-    pkg_dir = get_package_share_directory('patrol_bot')
-    config_path = os.path.join(pkg_dir, 'config', 'patrol_config.yaml')
+    pkg_patrol = get_package_share_directory("patrol_bot")
 
-    # ============================================================
-    # TODO: 集成 Gazebo 仿真环境
-    #   例如：
-    #     gazebo_launch = IncludeLaunchDescription(
-    #         PythonLaunchDescriptionSource([
-    #             get_package_share_directory('gazebo_ros'),
-    #             '/launch/gazebo.launch.py'
-    #         ]),
-    #         launch_arguments={
-    #             'world': os.path.join(pkg_dir, 'worlds', 'patrol_world.world'),
-    #             'verbose': 'true'
-    #         }.items()
-    #     )
-    #
-    # TODO: 集成 Nav2 bringup
-    #   例如：
-    #     nav2_launch = IncludeLaunchDescription(
-    #         PythonLaunchDescriptionSource([
-    #             get_package_share_directory('nav2_bringup'),
-    #             '/launch/bringup_launch.py'
-    #         ]),
-    #         launch_arguments={
-    #             'use_sim_time': 'true',
-    #             'params_file': os.path.join(pkg_dir, 'config', 'nav2_params.yaml'),
-    #             'map': os.path.join(pkg_dir, 'maps', 'patrol_map.yaml')
-    #         }.items()
-    #     )
-    #
-    # TODO: 生成机器人 spawn 实体（使用 robot_state_publisher + spawn_entity）
-    # ============================================================
+    world_file = os.path.join(pkg_patrol, "worlds", "patrol_world.sdf")
 
-    patrol_node = Node(
-        package='patrol_bot',
-        executable='patrol_bot_node',
-        name='patrol_bot_node',
-        output='screen',
-        parameters=[{'config_path': config_path}],
-    )
+    use_sim_time = LaunchConfiguration("use_sim_time", default="true")
 
-    # 组装 launch 描述
-    # 当集成 Gazebo + Nav2 后，将相应 action 加入列表
     return LaunchDescription([
-        # gazebo_launch,    # 取消注释以启用 Gazebo
-        # nav2_launch,      # 取消注释以启用 Nav2
-        patrol_node,
+        DeclareLaunchArgument("use_sim_time", default_value="true",
+                              description="仿真时钟"),
+
+        # === 1. Gazebo 仿真世界 ===
+        ExecuteProcess(
+            cmd=["bash", "-c",
+                 f"trap 'kill 0' INT TERM; ign gazebo -r -v 2 {world_file} & "
+                 "PID=$!; wait $PID; kill 0 2>/dev/null"],
+            output="screen",
+            name="gazebo",
+        ),
+
+        # === 2. ros_gz_bridge 桥接 ===
+        # cmd_vel: ROS /cmd_vel → Gazebo /model/patrol_bot/cmd_vel
+        # odometry: Gazebo → ROS /model/patrol_bot/odometry
+        # scan_cloud: Gazebo /scan → ROS /scan_cloud (PointCloud2)
+        # clock: Gazebo → ROS /clock
+        # camera: Gazebo → ROS /camera/image_raw
+        Node(
+            package="ros_gz_bridge", executable="parameter_bridge",
+            arguments=[
+                "/cmd_vel@geometry_msgs/msg/Twist]gz.msgs.Twist",
+                "/odometry@nav_msgs/msg/Odometry[gz.msgs.Odometry",
+                "/scan_cloud@sensor_msgs/msg/PointCloud2[gz.msgs.PointCloudPacked",
+                "/clock@rosgraph_msgs/msg/Clock[gz.msgs.Clock",
+                "/camera/image_raw@sensor_msgs/msg/Image[gz.msgs.Image",
+            ],
+            output="screen",
+            name="ros_gz_bridge",
+        ),
+
+        # === 3. 里程计帧名转换（仿真特有） ===
+        Node(
+            package="patrol_bot", executable="odom_republisher.py",
+            output="screen",
+            name="odom_republisher",
+        ),
+
+        # === 4. 点云→激光扫描（仿真特有） ===
+        Node(
+            package="patrol_bot", executable="pointcloud_to_scan.py",
+            parameters=[{"target_frame": "lidar_link"}],
+            output="screen",
+            name="pointcloud_to_scan",
+        ),
+
+        # === 5. TF: map → odom（AMCL 初始引导，仿真特有） ===
+        Node(
+            package="tf2_ros", executable="static_transform_publisher",
+            arguments=["--x", "-2.0", "--y", "-2.0", "--yaw", "0.0",
+                       "--frame-id", "map", "--child-frame-id", "odom"],
+            output="screen",
+            name="map_to_odom_tf",
+        ),
+
+        # === 6. 基础导航栈 + 巡逻节点 ===
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(
+                os.path.join(pkg_patrol, "launch", "patrol_bot.launch.py")
+            ),
+            launch_arguments={"use_sim_time": "true"}.items(),
+        ),
     ])

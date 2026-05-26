@@ -23,6 +23,7 @@ find_package(OpenCV REQUIRED)
 find_package(cv_bridge REQUIRED)
 find_package(patrol_bot_interfaces REQUIRED)
 find_package(tf2 REQUIRED)
+find_package(ament_index_cpp REQUIRED)
 
 include_directories(include)
 
@@ -66,7 +67,6 @@ add_library(patrol_bt_nodes STATIC
   src/bt_nodes/actions/handle_alarm.cpp
   src/bt_nodes/actions/save_patrol_context.cpp
   src/bt_nodes/actions/restore_patrol_context.cpp
-  src/bt_nodes/actions/load_routes.cpp
   src/bt_nodes/actions/set_route_context.cpp
 )
 
@@ -85,22 +85,27 @@ install(DIRECTORY
   config
   bt_xml
   launch
+  worlds
+  maps
+  models
   DESTINATION share/${PROJECT_NAME}
 )
 
-# 安装（控制脚本，带可执行权限）
+# 安装（所有脚本，带可执行权限）
 install(PROGRAMS
   scripts/start_patrol.sh
   scripts/pause_patrol.sh
   scripts/resume_patrol.sh
   scripts/stop_patrol.sh
+  scripts/odom_republisher.py
+  scripts/pointcloud_to_scan.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
 # 主可执行文件
 add_executable(patrol_bot_node src/patrol_bot_node.cpp)
 ament_target_dependencies(patrol_bot_node
-  rclcpp std_srvs sensor_msgs patrol_bot_interfaces
+  rclcpp std_srvs sensor_msgs patrol_bot_interfaces ament_index_cpp
 )
 target_link_libraries(patrol_bot_node
   patrol_bot_core
