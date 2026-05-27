@@ -30,8 +30,13 @@ class PointCloudToScan(Node):
         self.declare_parameter("range_max", 12.0)
         self.declare_parameter("scan_time", 0.1)
 
+        self.declare_parameter("input_topic", "/scan_cloud")
+
         self.sub = self.create_subscription(
-            PointCloud2, "/scan_cloud", self.cloud_cb, 10
+            PointCloud2,
+            self.get_parameter("input_topic").value,
+            self.cloud_cb,
+            10,
         )
         self.pub = self.create_publisher(LaserScan, "/scan", 10)
 

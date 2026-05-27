@@ -97,6 +97,7 @@ install(PROGRAMS
   scripts/pause_patrol.sh
   scripts/resume_patrol.sh
   scripts/stop_patrol.sh
+  scripts/odom_bridge.py
   scripts/odom_republisher.py
   scripts/pointcloud_to_scan.py
   DESTINATION lib/${PROJECT_NAME}

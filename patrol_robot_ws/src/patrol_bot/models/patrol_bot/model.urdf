@@ -1,48 +1,102 @@
 <?xml version="1.0"?>
 <!--
-  ====== PatrolBot URDF 模型 ======
-  TF 树: base_footprint → base_link → lidar_link
-  odom → base_footprint 由 odom_republisher 动态发布
-  map  → odom           由 AMCL 发布
+  PatrolBot URDF — ROS2 侧使用
+  用于 robot_state_publisher 发布 TF 静态变换
+
+  TF 树（与 SDF 模型保持一致）:
+    base_footprint → base_link → {left_wheel, right_wheel, caster, lidar_link, camera_link}
+
+  Gazebo 传感器与 DiffDrive 插件在 worlds/patrol_world.sdf 中定义。
 -->
 <robot name="patrol_bot">
+
   <material name="blue"><color rgba="0.2 0.2 0.8 1.0"/></material>
+  <material name="black"><color rgba="0.2 0.2 0.2 1.0"/></material>
+  <material name="green"><color rgba="0.0 0.8 0.0 1.0"/></material>
+  <material name="red"><color rgba="0.8 0.2 0.2 1.0"/></material>
 
   <link name="base_footprint"/>
-  <link name="base_link"/>
-  <link name="lidar_link"/>
-  <link name="camera_link"/>
-  <link name="chassis">
+
+  <link name="base_link">
     <visual>
       <geometry><box size="0.4 0.3 0.15"/></geometry>
       <material name="blue"/>
     </visual>
   </link>
 
-  <!-- base_footprint → base_link -->
+  <link name="left_wheel">
+    <visual>
+      <origin rpy="1.5708 0 0"/>
+      <geometry><cylinder radius="0.05" length="0.02"/></geometry>
+      <material name="black"/>
+    </visual>
+  </link>
+
+  <link name="right_wheel">
+    <visual>
+      <origin rpy="1.5708 0 0"/>
+      <geometry><cylinder radius="0.05" length="0.02"/></geometry>
+      <material name="black"/>
+    </visual>
+  </link>
+
+  <link name="caster">
+    <visual>
+      <geometry><sphere radius="0.03"/></geometry>
+      <material name="black"/>
+    </visual>
+  </link>
+
+  <link name="lidar_link">
+    <visual>
+      <geometry><cylinder radius="0.04" length="0.04"/></geometry>
+      <material name="green"/>
+    </visual>
+  </link>
+
+  <link name="camera_link">
+    <visual>
+      <geometry><box size="0.03 0.03 0.02"/></geometry>
+      <material name="red"/>
+    </visual>
+  </link>
+
   <joint name="base_joint" type="fixed">
     <parent link="base_footprint"/>
     <child link="base_link"/>
     <origin xyz="0 0 0.1" rpy="0 0 0"/>
   </joint>
 
-  <!-- base_link → chassis -->
-  <joint name="chassis_joint" type="fixed">
+  <joint name="left_wheel_joint" type="continuous">
     <parent link="base_link"/>
-    <child link="chassis"/>
+    <child link="left_wheel"/>
+    <origin xyz="0.12 0.18 -0.12" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/>
   </joint>
 
-  <!-- base_link → lidar_link: LiDAR 偏心安装 -->
+  <joint name="right_wheel_joint" type="continuous">
+    <parent link="base_link"/>
+    <child link="right_wheel"/>
+    <origin xyz="0.12 -0.18 -0.12" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/>
+  </joint>
+
+  <joint name="caster_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="caster"/>
+    <origin xyz="-0.15 0 -0.14" rpy="0 0 0"/>
+  </joint>
+
   <joint name="lidar_joint" type="fixed">
     <parent link="base_link"/>
     <child link="lidar_link"/>
     <origin xyz="0.1 0 0.1" rpy="0 0 0"/>
   </joint>
 
-  <!-- base_link → camera_link: 相机前方顶部安装 -->
   <joint name="camera_joint" type="fixed">
     <parent link="base_link"/>
     <child link="camera_link"/>
     <origin xyz="0.18 0 0.12" rpy="0 0 0"/>
   </joint>
+
 </robot>
