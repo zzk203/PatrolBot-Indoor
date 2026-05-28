@@ -356,10 +356,10 @@ TEST(BtNodesTest, SimulateCharging_Recovered) {
 
 TEST(BtNodesTest, SavePatrolContext_Logic) {
     int current_route_index = 1;
-    int current_waypoint_idx = 3;
+    int current_waypoint_index = 3;
 
     int saved_route_index = current_route_index;
-    int saved_waypoint_idx = current_waypoint_idx;
+    int saved_waypoint_idx = current_waypoint_index;
 
     EXPECT_EQ(saved_route_index, 1);
     EXPECT_EQ(saved_waypoint_idx, 3);

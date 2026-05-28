@@ -237,6 +237,19 @@ private:
 
         // WaitAtWaypoint is auto-registered (no deps)
         factory.registerNodeType<WaitAtWaypoint>("WaitAtWaypoint");
+
+        // Inline action: advance to next route after inner loop completes
+        factory.registerSimpleAction("AdvanceToNextRoute",
+            [](const BT::TreeNode& node) {
+                auto bb = node.config().blackboard;
+                int route_idx = bb->get<int>("current_route_index");
+                auto routes = bb->get<std::vector<Route>>("patrol_routes");
+                int num_routes = static_cast<int>(routes.size());
+                int next_route = (route_idx + 1) % num_routes;
+                bb->set<int>("current_route_index", next_route);
+                bb->set<int>("current_waypoint_index", 0);
+                return BT::NodeStatus::SUCCESS;
+            });
     }
 
     // ==================== BT tick 定时器 ====================

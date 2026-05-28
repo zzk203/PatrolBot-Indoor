@@ -14,7 +14,9 @@ BT::PortsList SetRouteContext::providedPorts() {
     return {
         BT::InputPort<int>("current_route_index"),
         BT::InputPort<std::vector<Route>>("patrol_routes"),
-        BT::OutputPort<Route>("current_route")
+        BT::OutputPort<Route>("current_route"),
+        BT::OutputPort<int>("waypoint_count"),
+        BT::BidirectionalPort<int>("current_waypoint_index")
     };
 }
 
@@ -44,9 +46,26 @@ BT::NodeStatus SetRouteContext::tick() {
 
     setOutput<Route>("current_route", all_routes[idx]);
 
+    int total_waypoints = static_cast<int>(all_routes[idx].waypoints.size());
+
+    // Read current waypoint index to detect restore vs fresh start
+    auto wp_input = getInput<int>("current_waypoint_index");
+    int wp_idx = (wp_input && wp_input.value() >= 0) ? wp_input.value() : 0;
+
+    // If waypoint index is stale (>= total), reset to 0
+    if (wp_idx >= total_waypoints) {
+        wp_idx = 0;
+    }
+
+    int remaining = total_waypoints - wp_idx;
+    setOutput<int>("waypoint_count", remaining);
+    setOutput<int>("current_waypoint_index", wp_idx);
+
     logger_->info("SetRouteContext",
                   "Set current route to \"" + all_routes[idx].name +
-                  "\" (index " + std::to_string(idx) + ")");
+                  "\" (index " + std::to_string(idx) +
+                  "), waypoints=" + std::to_string(remaining) +
+                  " (from wp " + std::to_string(wp_idx) + ")");
 
     return BT::NodeStatus::SUCCESS;
 }

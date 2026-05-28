@@ -12,7 +12,7 @@ BT::PortsList RestorePatrolContext::providedPorts() {
   return {BT::InputPort<int>("saved_route_index"),
           BT::InputPort<int>("saved_waypoint_idx"),
           BT::OutputPort<int>("current_route_index"),
-          BT::OutputPort<int>("current_waypoint_idx"),
+          BT::OutputPort<int>("current_waypoint_index"),
           BT::OutputPort<Waypoint>("current_waypoint"),
           BT::InputPort<std::vector<Route>>("patrol_routes")};
 }
@@ -33,7 +33,7 @@ BT::NodeStatus RestorePatrolContext::tick() {
     int wp_idx = saved_wp.value();
 
     setOutput<int>("current_route_index", route_idx);
-    setOutput<int>("current_waypoint_idx", wp_idx);
+    setOutput<int>("current_waypoint_index", wp_idx);
 
     const auto &all_routes = routes.value();
     if (route_idx >= 0 && route_idx < static_cast<int>(all_routes.size()) &&

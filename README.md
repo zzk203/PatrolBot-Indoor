@@ -84,6 +84,11 @@ ros2 service call /patrol/stop_patrol std_srvs/srv/Trigger "{}"
 
 # 查看状态
 ros2 topic echo /patrol/status
+# 查看机器人坐标
+ros2 run tf2_ros tf2_echo map base_link
+# 查看具体话题的发布者、订阅者
+ros2 topic info /patrol/status -v
+ros2 topic info /patrol/battery -v
 ```
 
 ## 配置文件

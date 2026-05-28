@@ -133,7 +133,7 @@
          │  - battery_level         │◄────────── ConfigLoader (启动时加载)
          │  - patrol_state          │
          │  - current_route_index   │
-         │  - current_waypoint_idx  │
+         │  - current_waypoint_index  │
          │  - alarm_list            │
          │  - ...                   │
          └────────────┬─────────────┘
@@ -248,7 +248,7 @@
 | `HandleAlarm` | `SyncActionNode` | 根据严重性分级处理：warning 写日志；critical 写日志+设 patrol_state=PAUSED | FR-10 | 无 |
 | `SavePatrolContext` | `SyncActionNode` | 将当前路线编号和巡逻点编号保存至 `saved_route_index` / `saved_waypoint_idx` | FR-06 | 无 |
 | `LoadRoutes` | `SyncActionNode` | 将 ConfigLoader 解析好的路线数据导入黑板 | FR-01 | 无 |
-| `SetRouteContext` | `SyncActionNode` | 设置 `current_route` 和 `current_waypoint_idx` | — | 无 |
+| `SetRouteContext` | `SyncActionNode` | 设置 `current_route` 和 `current_waypoint_index` | — | 无 |
 
 **不需要单独节点的功能**：
 - **始停控制**——通过 ROS2 Service 修改黑板变量 `patrol_state`，配合顶层 Condition 节点实现，不依赖 BT 内部节点。

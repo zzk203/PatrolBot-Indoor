@@ -18,13 +18,13 @@ CaptureImage::CaptureImage(const std::string& name,
 BT::PortsList CaptureImage::providedPorts() {
     return {
         BT::InputPort<int>("current_route_index"),
-        BT::InputPort<int>("current_waypoint_idx")
+        BT::InputPort<int>("current_waypoint_index")
     };
 }
 
 BT::NodeStatus CaptureImage::tick() {
     auto route_idx = getInput<int>("current_route_index");
-    auto wp_idx = getInput<int>("current_waypoint_idx");
+    auto wp_idx = getInput<int>("current_waypoint_index");
 
     // 生成文件名: route{R}_wp{W}_{YYYYMMDD_HHMMSS}
     auto now = std::chrono::system_clock::now();

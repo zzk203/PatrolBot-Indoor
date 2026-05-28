@@ -786,7 +786,7 @@ onRunning():
         nav_client->cancel_goal()
         logger.warn("NAV_TIMEOUT",
             format("Timeout at route=%d waypoint=%d",
-                   current_route_idx, current_waypoint_idx))
+                   current_route_idx, current_waypoint_index))
         return FAILURE
 
     return RUNNING

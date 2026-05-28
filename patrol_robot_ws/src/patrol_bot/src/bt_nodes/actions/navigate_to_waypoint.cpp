@@ -12,10 +12,9 @@ NavigateToWaypoint::NavigateToWaypoint(
 
 BT::PortsList NavigateToWaypoint::providedPorts() {
   return {BT::InputPort<Route>("current_route"),
-          BT::InputPort<int>("current_waypoint_index"),
           BT::InputPort<double>("nav_timeout"),
           BT::OutputPort<Waypoint>("current_waypoint"),
-          BT::OutputPort<int>("current_waypoint_index")};
+          BT::BidirectionalPort<int>("current_waypoint_index")};
 }
 
 BT::NodeStatus NavigateToWaypoint::onStart() {
@@ -59,7 +58,7 @@ BT::NodeStatus NavigateToWaypoint::onStart() {
   nav2_client_->send_goal(pose.x, pose.y, pose.yaw);
 
   logger_->info("NavigateToWaypoint",
-                "Navigating to (" + std::to_string(pose.x) + ", " +
+                "Navigating to waypoint "+std::to_string(idx)+" (" + std::to_string(pose.x) + ", " +
                     std::to_string(pose.y) + ", " + std::to_string(pose.yaw) +
                     ") with timeout " + std::to_string(nav_timeout_) + "s");
 
@@ -74,15 +73,12 @@ BT::NodeStatus NavigateToWaypoint::onRunning() {
     return BT::NodeStatus::RUNNING;
 
   case NavResult::SUCCESS: {
-    logger_->info("NavigateToWaypoint", "Navigation succeeded");
-
+    
     auto wp_idx = getInput<int>("current_waypoint_index");
     int next_idx = wp_idx.value() + 1;
-    if (next_idx >= waypoint_count_) {
-      next_idx = 0;
-    }
     setOutput<int>("current_waypoint_index", next_idx);
-
+    logger_->info("NavigateToWaypoint", "Navigation succeeded! next_wp_idx:" + std::to_string(next_idx));
+    
     return BT::NodeStatus::SUCCESS;
   }
 

@@ -13,7 +13,7 @@ SavePatrolContext::SavePatrolContext(const std::string& name,
 BT::PortsList SavePatrolContext::providedPorts() {
     return {
         BT::InputPort<int>("current_route_index"),
-        BT::InputPort<int>("current_waypoint_idx"),
+        BT::InputPort<int>("current_waypoint_index"),
         BT::OutputPort<int>("saved_route_index"),
         BT::OutputPort<int>("saved_waypoint_idx")
     };
@@ -21,7 +21,7 @@ BT::PortsList SavePatrolContext::providedPorts() {
 
 BT::NodeStatus SavePatrolContext::tick() {
     auto route_idx = getInput<int>("current_route_index");
-    auto wp_idx = getInput<int>("current_waypoint_idx");
+    auto wp_idx = getInput<int>("current_waypoint_index");
 
     if (!route_idx) {
         throw BT::RuntimeError(
@@ -30,7 +30,7 @@ BT::NodeStatus SavePatrolContext::tick() {
     }
     if (!wp_idx) {
         throw BT::RuntimeError(
-            "SavePatrolContext: missing current_waypoint_idx: ",
+            "SavePatrolContext: missing current_waypoint_index: ",
             wp_idx.error());
     }
 
