@@ -70,8 +70,10 @@ find src/patrol_bot -name '*.cpp' | xargs clang-tidy -p build/patrol_bot
 ```bash
 source install/setup.bash
 
-# 仅启动巡逻节点
+# 仅启动巡逻节点,需要真机/仿真的回放数据才能正常运行
 ros2 launch patrol_bot patrol_bot.launch.py
+# 仅启动巡逻节点,不依赖仿真/Nav2/传感器，直接验证 BT 逻辑
+ros2 launch patrol_bot patrol_bot.launch.py mock_navigation:=true
 
 # 完整仿真（Gazebo + Nav2 + Patrol）
 ros2 launch patrol_bot patrol_simulation.launch.py

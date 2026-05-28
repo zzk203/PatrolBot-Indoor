@@ -26,6 +26,9 @@ public:
     Nav2ActionClient(rclcpp::Node* node,
                      const std::string& action_name = "/navigate_to_pose");
 
+    /// 启用 mock 模式：导航立即返回成功，无需真实 Nav2
+    void set_mock(bool mock) { mock_ = mock; }
+
     bool wait_for_server(std::chrono::seconds timeout);
 
     void send_goal(double x, double y, double yaw);
@@ -44,6 +47,7 @@ private:
     std::atomic<NavResult> result_{NavResult::NOT_STARTED};
     std::atomic<bool> result_ready_{false};
     std::atomic<bool> server_ready_{false};
+    bool mock_ = false;
 };
 
 }  // namespace patrol_bot

@@ -20,11 +20,24 @@ Nav2ActionClient::Nav2ActionClient(rclcpp::Node* node, const std::string& action
 }
 
 bool Nav2ActionClient::wait_for_server(std::chrono::seconds timeout) {
+    if (mock_) {
+        server_ready_ = true;
+        return true;
+    }
     server_ready_ = client_->wait_for_action_server(timeout);
     return server_ready_.load();
 }
 
 void Nav2ActionClient::send_goal(double x, double y, double yaw) {
+    if (mock_) {
+        RCLCPP_INFO(node_->get_logger(),
+                    "[MOCK] Nav2 goal (%.2f, %.2f, %.2f) — skipping, returning success",
+                    x, y, yaw);
+        result_ = NavResult::SUCCESS;
+        result_ready_ = true;
+        return;
+    }
+
     if (!server_ready_) {
         result_ = NavResult::ERROR;
         result_ready_ = true;

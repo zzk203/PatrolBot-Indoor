@@ -33,6 +33,7 @@ public:
 
         // --- 阶段 1: 参数声明 ---
         declare_parameter("config_path", share_dir + "/config/patrol_config.yaml");
+        declare_parameter("mock_navigation", false);
 
         // --- 阶段 2: 配置加载 (fail-fast) ---
         try {
@@ -52,6 +53,10 @@ public:
         battery_model_ = std::make_shared<BatteryModel>(this, config_.battery);
         alarm_manager_ = std::make_shared<AlarmManager>(this, *logger_);
         nav_client_ = std::make_shared<Nav2ActionClient>(this);
+        if (get_parameter("mock_navigation").as_bool()) {
+            nav_client_->set_mock(true);
+            RCLCPP_INFO(get_logger(), "Mock navigation enabled — Nav2 calls will return success immediately");
+        }
 
         // --- 阶段 4: 等待 Nav2 Action Server ---
         RCLCPP_INFO(get_logger(), "Waiting for Nav2 action server...");
