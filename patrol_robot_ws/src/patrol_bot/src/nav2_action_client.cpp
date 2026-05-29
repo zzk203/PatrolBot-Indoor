@@ -14,9 +14,15 @@ geometry_msgs::msg::Quaternion yaw_to_quaternion_msg(double yaw) {
     return msg;
 }
 
-Nav2ActionClient::Nav2ActionClient(rclcpp::Node* node, const std::string& action_name)
+Nav2ActionClient::Nav2ActionClient(rclcpp::Node* node, const bool mock, const std::string& action_name)
     : node_(node) {
     client_ = rclcpp_action::create_client<nav2_msgs::action::NavigateToPose>(node_, action_name);
+    set_mock(mock);
+}
+
+ void Nav2ActionClient::set_mock(bool mock) {
+    mock_ = mock; 
+    RCLCPP_INFO(node_->get_logger(), "Mock navigation enabled — Nav2 calls will return success immediately");
 }
 
 bool Nav2ActionClient::wait_for_server(std::chrono::seconds timeout) {

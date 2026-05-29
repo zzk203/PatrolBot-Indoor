@@ -11,11 +11,11 @@
 namespace patrol_bot {
 
 enum class NavResult {
-    SUCCESS,
-    FAILURE,
-    RUNNING,
-    NOT_STARTED,
-    ERROR
+    SUCCESS,      // 导航成功到达
+    FAILURE,      // 导航失败 (Nav2 返回 ABORTED 或 CANCELED)
+    RUNNING,      // 导航进行中
+    NOT_STARTED,  // 尚未发送 goal
+    ERROR         // Action 通信异常 (服务端未就绪等)
 };
 
 /// 将 yaw 角度（弧度）转换为 geometry_msgs::msg::Quaternion
@@ -23,11 +23,11 @@ geometry_msgs::msg::Quaternion yaw_to_quaternion_msg(double yaw);
 
 class Nav2ActionClient {
 public:
-    Nav2ActionClient(rclcpp::Node* node,
+    Nav2ActionClient(rclcpp::Node* node, const bool mock = false,
                      const std::string& action_name = "/navigate_to_pose");
 
     /// 启用 mock 模式：导航立即返回成功，无需真实 Nav2
-    void set_mock(bool mock) { mock_ = mock; }
+    void set_mock(bool mock);
 
     bool wait_for_server(std::chrono::seconds timeout);
 

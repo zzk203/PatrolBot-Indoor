@@ -8,7 +8,26 @@ NavigateToWaypoint::NavigateToWaypoint(
     std::shared_ptr<Nav2ActionClient> nav2_client,
     std::shared_ptr<PatrolLogger> logger)
     : BT::StatefulActionNode(name, config),
-      nav2_client_(std::move(nav2_client)), logger_(std::move(logger)) {}
+      nav2_client_(std::move(nav2_client)), logger_(std::move(logger)) {
+        using namespace std::chrono_literals;
+  logger_->info("NavigateToWaypoint", "Waiting for Nav2 action server...");
+  if (!nav2_client_->wait_for_server(10s)) {
+    logger_->warn("NavigateToWaypoint",
+                  "Nav2 action server not ready after 10s, retrying...");
+    bool ready = false;
+    for (int i = 0; i < 3; ++i) {
+      if (nav2_client_->wait_for_server(5s)) {
+        ready = true;
+        break;
+      }
+    }
+    if (!ready) {
+      logger_->error("NavigateToWaypoint", "Nav2 action server unavailable after retries");
+      throw std::runtime_error("Nav2 action server not ready");
+    }
+  }
+  logger_->info("NavigateToWaypoint", "Nav2 action server is ready");
+}
 
 BT::PortsList NavigateToWaypoint::providedPorts() {
   return {BT::InputPort<Route>("current_route"),
@@ -58,9 +77,10 @@ BT::NodeStatus NavigateToWaypoint::onStart() {
   nav2_client_->send_goal(pose.x, pose.y, pose.yaw);
 
   logger_->info("NavigateToWaypoint",
-                "Navigating to waypoint "+std::to_string(idx)+" (" + std::to_string(pose.x) + ", " +
-                    std::to_string(pose.y) + ", " + std::to_string(pose.yaw) +
-                    ") with timeout " + std::to_string(nav_timeout_) + "s");
+                "Navigating to waypoint " + std::to_string(idx) + " (" +
+                    std::to_string(pose.x) + ", " + std::to_string(pose.y) +
+                    ", " + std::to_string(pose.yaw) + ") with timeout " +
+                    std::to_string(nav_timeout_) + "s");
 
   return BT::NodeStatus::RUNNING;
 }
@@ -73,18 +93,21 @@ BT::NodeStatus NavigateToWaypoint::onRunning() {
     return BT::NodeStatus::RUNNING;
 
   case NavResult::SUCCESS: {
-    
+
     auto wp_idx = getInput<int>("current_waypoint_index");
     int next_idx = wp_idx.value() + 1;
     setOutput<int>("current_waypoint_index", next_idx);
-    logger_->info("NavigateToWaypoint", "Navigation succeeded! next_wp_idx:" + std::to_string(next_idx));
-    
+    logger_->info("NavigateToWaypoint", "Navigation succeeded! next_wp_idx:" +
+                                            std::to_string(next_idx));
+
     return BT::NodeStatus::SUCCESS;
   }
 
   case NavResult::FAILURE:
+    logger_->warn("NavigateToWaypoint", "Navigation failed by FAILURE");
+    return BT::NodeStatus::FAILURE;
   case NavResult::ERROR:
-    logger_->warn("NavigateToWaypoint", "Navigation failed");
+    logger_->warn("NavigateToWaypoint", "Navigation failed by ERROR");
     return BT::NodeStatus::FAILURE;
 
   default:

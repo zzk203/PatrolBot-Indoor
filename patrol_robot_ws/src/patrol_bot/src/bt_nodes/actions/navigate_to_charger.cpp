@@ -10,7 +10,26 @@ NavigateToCharger::NavigateToCharger(const std::string& name,
     : BT::StatefulActionNode(name, config)
     , nav2_client_(std::move(nav2_client))
     , logger_(std::move(logger))
-{}
+{
+    using namespace std::chrono_literals;
+    logger_->info("NavigateToCharger", "Waiting for Nav2 action server...");
+    if (!nav2_client_->wait_for_server(10s)) {
+        logger_->warn("NavigateToCharger",
+                  "Nav2 action server not ready after 10s, retrying...");
+        bool ready = false;
+        for (int i = 0; i < 3; ++i) {
+            if (nav2_client_->wait_for_server(5s)) {
+            ready = true;
+            break;
+        }
+    }
+        if (!ready) {
+            logger_->error("NavigateToCharger", "Nav2 action server unavailable after retries");
+            throw std::runtime_error("Nav2 action server not ready");
+        }
+    }
+    logger_->info("NavigateToCharger", "Nav2 action server is ready");
+}
 
 BT::PortsList NavigateToCharger::providedPorts() {
     return {
@@ -47,8 +66,10 @@ BT::NodeStatus NavigateToCharger::onRunning() {
             return BT::NodeStatus::SUCCESS;
 
         case NavResult::FAILURE:
+            logger_->warn("NavigateToCharger", "Failed to reach charger by FAILURE");
+            return BT::NodeStatus::FAILURE;
         case NavResult::ERROR:
-            logger_->warn("NavigateToCharger", "Failed to reach charger");
+            logger_->warn("NavigateToCharger", "Failed to reach charger by ERROR");
             return BT::NodeStatus::FAILURE;
 
         default:

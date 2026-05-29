@@ -52,30 +52,9 @@ public:
             config_.camera.save_directory, config_.camera.image_format);
         battery_model_ = std::make_shared<BatteryModel>(this, config_.battery);
         alarm_manager_ = std::make_shared<AlarmManager>(this, *logger_);
-        nav_client_ = std::make_shared<Nav2ActionClient>(this);
-        if (get_parameter("mock_navigation").as_bool()) {
-            nav_client_->set_mock(true);
-            RCLCPP_INFO(get_logger(), "Mock navigation enabled — Nav2 calls will return success immediately");
-        }
 
         // --- 阶段 4: 等待 Nav2 Action Server ---
-        RCLCPP_INFO(get_logger(), "Waiting for Nav2 action server...");
-        if (!nav_client_->wait_for_server(10s)) {
-            RCLCPP_WARN(get_logger(), "Nav2 action server not ready after 10s, retrying...");
-            bool ready = false;
-            for (int i = 0; i < 3; ++i) {
-                if (nav_client_->wait_for_server(5s)) {
-                    ready = true;
-                    break;
-                }
-                RCLCPP_WARN(get_logger(), "Retry %d/3: Nav2 action server still not ready", i + 1);
-            }
-            if (!ready) {
-                RCLCPP_FATAL(get_logger(), "Nav2 action server unavailable after retries");
-                throw std::runtime_error("Nav2 action server not ready");
-            }
-        }
-        RCLCPP_INFO(get_logger(), "Nav2 action server is ready");
+        // 挪到对应的bt节点
 
         // --- 阶段 5: 黑板初始化 ---
         blackboard_ = BT::Blackboard::create();
@@ -224,13 +203,13 @@ private:
         // === StatefulAction Nodes ===
         BT::NodeBuilder builder_nav_wp =
             [this](const std::string& name, const BT::NodeConfig& config) {
-                return std::make_unique<NavigateToWaypoint>(name, config, nav_client_, logger_);
+                return std::make_unique<NavigateToWaypoint>(name, config, std::make_shared<Nav2ActionClient>(this, get_parameter("mock_navigation").as_bool()), logger_);
             };
         factory.registerBuilder<NavigateToWaypoint>("NavigateToWaypoint", builder_nav_wp);
 
         BT::NodeBuilder builder_nav_ch =
             [this](const std::string& name, const BT::NodeConfig& config) {
-                return std::make_unique<NavigateToCharger>(name, config, nav_client_, logger_);
+                return std::make_unique<NavigateToCharger>(name, config, std::make_shared<Nav2ActionClient>(this,get_parameter("mock_navigation").as_bool()), logger_);
             };
         factory.registerBuilder<NavigateToCharger>("NavigateToCharger", builder_nav_ch);
 
@@ -351,7 +330,6 @@ private:
     std::shared_ptr<CameraBuffer> camera_buffer_;
     std::shared_ptr<BatteryModel> battery_model_;
     std::shared_ptr<AlarmManager> alarm_manager_;
-    std::shared_ptr<Nav2ActionClient> nav_client_;
 
     BT::Blackboard::Ptr blackboard_;
     std::unique_ptr<BT::Tree> tree_;
