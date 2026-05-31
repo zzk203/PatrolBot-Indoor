@@ -40,7 +40,7 @@ class PointCloudToScan(Node):
         )
         self.pub = self.create_publisher(LaserScan, "/scan", 10)
 
-        self.get_logger().info("PointCloudToScan started: /scan_cloud -> /scan")
+        self.get_logger().info(f"PointCloudToScan started: {self.get_parameter('input_topic').value} -> /scan")
 
     def cloud_cb(self, msg: PointCloud2):
         target = self.get_parameter("target_frame").value

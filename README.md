@@ -206,6 +206,10 @@ source /opt/ros/humble/setup.bash
 
 # 编译所有包
 colcon build --packages-select patrol_bot_interfaces patrol_bot
+# 本地调试用，编译所有包，install的部分使用软链接（改动相关文件时不用重新编译）,如果脚本没有执行权限需要先赋权
+# chmod +x src/patrol_bot/scripts/*.py
+# chmod +x src/patrol_bot/scripts/*.sh
+colcon build --symlink-install --packages-select patrol_bot_interfaces patrol_bot
 
 # 或编译全部 workspace
 colcon build
