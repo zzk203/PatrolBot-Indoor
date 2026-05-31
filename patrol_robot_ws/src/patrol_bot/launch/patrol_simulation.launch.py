@@ -13,12 +13,10 @@
 import os
 from launch import LaunchDescription
 from launch.actions import (
-    DeclareLaunchArgument,
     ExecuteProcess,
     IncludeLaunchDescription,
 )
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 from ament_index_python.packages import get_package_share_directory
 
@@ -27,19 +25,8 @@ def generate_launch_description():
     pkg_patrol = get_package_share_directory("patrol_bot")
 
     world_file = os.path.join(pkg_patrol, "worlds", "patrol_world.sdf")
-    urdf_file = os.path.join(pkg_patrol, "models", "patrol_bot", "model.urdf")
-
-    use_sim_time = LaunchConfiguration("use_sim_time", default="true")
-
-    with open(urdf_file, "r") as f:
-        robot_desc = f.read()
-
-    robot_description = {"robot_description": robot_desc}
 
     return LaunchDescription([
-        DeclareLaunchArgument("use_sim_time", default_value="true",
-                              description="使用仿真时钟"),
-
         # === 1. Gazebo 仿真世界 (含机器人模型) ===
         ExecuteProcess(
             cmd=["bash", "-c",
