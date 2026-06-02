@@ -8,15 +8,21 @@
   4. pointcloud_to_scan  — 点云 → 激光扫描 (Nav2 需要)
   5. robot_state_publisher — URDF → TF 静态变换
   6. 导航栈 + 巡逻节点    — include patrol_bot.launch.py
+
+参数:
+  enable_navigation  — 是否启动 Nav2 导航栈 (默认 true)
+  mock_navigation    — 是否启用 patrol_bot_node 内部 mock 导航 (默认 false)
 """
 
 import os
 from launch import LaunchDescription
 from launch.actions import (
+    DeclareLaunchArgument,
     ExecuteProcess,
     IncludeLaunchDescription,
 )
 from launch.launch_description_sources import PythonLaunchDescriptionSource
+from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 from ament_index_python.packages import get_package_share_directory
 
@@ -26,7 +32,15 @@ def generate_launch_description():
 
     world_file = os.path.join(pkg_patrol, "worlds", "patrol_world.sdf")
 
+    enable_nav = LaunchConfiguration("enable_navigation", default="true")
+    mock_nav = LaunchConfiguration("mock_navigation", default="false")
+
     return LaunchDescription([
+        DeclareLaunchArgument("enable_navigation", default_value="true",
+                              description="是否启动 Nav2 导航栈（关闭后仅运行仿真 + patrol_bot_node）"),
+        DeclareLaunchArgument("mock_navigation", default_value="false",
+                              description="Mock 导航模式：patrol_bot_node 内部跳过 Nav2 调用，直接返回成功"),
+
         # === 1. Gazebo 仿真世界 (含机器人模型) ===
         ExecuteProcess(
             cmd=["bash", "-c",
@@ -76,6 +90,10 @@ def generate_launch_description():
             PythonLaunchDescriptionSource(
                 os.path.join(pkg_patrol, "launch", "patrol_bot.launch.py")
             ),
-            launch_arguments={"use_sim_time": "true"}.items(),
+            launch_arguments={
+                "use_sim_time": "true",
+                "enable_navigation": enable_nav,
+                "mock_navigation": mock_nav,
+            }.items(),
         ),
     ])

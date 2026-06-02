@@ -246,14 +246,17 @@ find src/patrol_bot -name '*.cpp' | xargs clang-tidy \
 ```bash
 source install/setup.bash
 
-# === 模式 1: Mock 导航（无需仿真，直接验证 BT 逻辑） ===
-ros2 launch patrol_bot patrol_bot.launch.py mock_navigation:=true
+# === 模式 1: Mock 导航（无需仿真/Nav2，直接验证 BT 逻辑） ===
+ros2 launch patrol_bot patrol_bot.launch.py mock_navigation:=true enable_navigation:=false
 
-# === 模式 2: 导航模式（需要 Nav2 + 传感器，含真机或回放数据） ===
+# === 模式 2: 仅巡逻节点 + Nav2（需要传感器数据） ===
 ros2 launch patrol_bot patrol_bot.launch.py
 
 # === 模式 3: 完整仿真（Gazebo + 桥接 + Nav2 + Patrol） ===
 ros2 launch patrol_bot patrol_simulation.launch.py
+
+# === 模式 4: 仿真 + 关闭导航（仅 Gazebo + patrol_bot_node，方便调试） ===
+ros2 launch patrol_bot patrol_simulation.launch.py enable_navigation:=false mock_navigation:=true
 ```
 
 ### 控制命令
@@ -327,6 +330,15 @@ alarm_simulate:
 - **CI 测试**：纯逻辑测试无需启动仿真环境
 
 Mock 模式通过 `Nav2ActionClient(node, mock=true)` 构造函数注入，BT 节点在 `register_nodes()` 中根据参数创建 mock 或真实 client。
+
+### 关闭导航服务
+
+`enable_navigation:=false` 参数用于跳过 Nav2 导航栈（map_server / amcl / planner_server / controller_server / behavior_server / bt_navigator / lifecycle_manager）的启动：
+
+- 与 `mock_navigation` 独立控制：`enable_navigation` 控制是否**启动** Nav2 节点，`mock_navigation` 控制 patrol_bot_node **内部**是否真的调用 Nav2
+- `enable_navigation:=false mock_navigation:=true`：最简启动，仅 patrol_bot_node + robot_state_publisher，适合纯 BT 逻辑验证
+- `enable_navigation:=true mock_navigation:=true`：启动 Nav2 栈但 patrol 不调用，适合单独调试 Nav2
+- `enable_navigation:=true mock_navigation:=false`（默认）：完整导航模式
 
 ---
 
